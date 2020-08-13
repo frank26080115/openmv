@@ -35,6 +35,7 @@ static int cumulative_moving_average(int avg, int x, int n)
     return (x + (n * avg)) / (n + 1);
 }
 
+#ifndef FINDBLOBS_LIGHTWEIGHT
 static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_t **new_hist, uint16_t *new_size)
 {
     int start = -1;
@@ -66,7 +67,9 @@ static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_
         }
     }
 }
+#endif
 
+#ifndef FINDBLOBS_LIGHTWEIGHT
 static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, uint16_t *b_dst_hist_len,
                        int b_src_start, int b_src_end, uint16_t **b_src_hist, uint16_t *b_src_hist_len,
                        unsigned int max_size)
@@ -108,7 +111,9 @@ static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, ui
     *b_src_hist_len = 0;
     (*b_src_hist) = NULL;
 }
+#endif
 
+#ifndef FINDBLOBS_LIGHTWEIGHT
 static float calc_roundness(float blob_a, float blob_b, float blob_c)
 {
     float roundness_div = fast_sqrtf((blob_b * blob_b) + ((blob_a - blob_c) * (blob_a - blob_c)));
@@ -128,6 +133,7 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c)
 
     return IM_DIV(roundness_min, roundness_max);
 }
+#endif
 
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
@@ -136,12 +142,13 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                       bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg,
                       unsigned int x_hist_bins_max, unsigned int y_hist_bins_max)
 {
+
     // Same size as the image so we don't have to translate.
     image_t bmp;
     bmp.w = ptr->w;
     bmp.h = ptr->h;
     bmp.bpp = IMAGE_BPP_BINARY;
-    bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
+    bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_PREFER_SIZE);
 
     uint16_t *x_hist_bins = NULL;
     if (x_hist_bins_max) x_hist_bins = fb_alloc(ptr->w * sizeof(uint16_t), FB_ALLOC_NO_HINT);
@@ -370,34 +377,43 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+                                #endif
 
                                 find_blobs_list_lnk_data_t lnk_blob;
                                 memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
                                 memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.perimeter = blob_perimeter;
+                                #endif
                                 lnk_blob.code = 1 << code;
                                 lnk_blob.count = 1;
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                #endif
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+                                #endif
 
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
                                 }
@@ -405,12 +421,15 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (y_hist_bins) {
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
+                                #endif
 
                                 if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
+                                    #ifndef FINDBLOBS_LIGHTWEIGHT
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
                                     if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                    #endif
                                 }
                             }
 
@@ -630,34 +649,43 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+                                #endif
 
                                 find_blobs_list_lnk_data_t lnk_blob;
                                 memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
                                 memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.perimeter = blob_perimeter;
+                                #endif
                                 lnk_blob.code = 1 << code;
                                 lnk_blob.count = 1;
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                #endif
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+                                #endif
 
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
                                 }
@@ -665,12 +693,15 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (y_hist_bins) {
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
+                                #endif
 
                                 if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
+                                    #ifndef FINDBLOBS_LIGHTWEIGHT
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
                                     if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                    #endif
                                 }
                             }
 
@@ -890,34 +921,43 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+                                #endif
 
                                 find_blobs_list_lnk_data_t lnk_blob;
                                 memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
                                 memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.perimeter = blob_perimeter;
+                                #endif
                                 lnk_blob.code = 1 << code;
                                 lnk_blob.count = 1;
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                #endif
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+                                #endif
 
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
                                 }
@@ -925,12 +965,15 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (y_hist_bins) {
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
+                                #endif
 
                                 if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
+                                    #ifndef FINDBLOBS_LIGHTWEIGHT
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
                                     if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                    #endif
                                 }
                             }
 
@@ -978,12 +1021,34 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                     if (rectangle_overlap(&(lnk_blob.rect), &temp)
                     && ((merge_cb_arg == NULL) || merge_cb(merge_cb_arg, &lnk_blob, &tmp_blob))) {
                         // Have to merge these first before merging rects.
-                        if (x_hist_bins_max) merge_bins(lnk_blob.rect.x, lnk_blob.rect.x + lnk_blob.rect.w - 1, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count,
-                                                        tmp_blob.rect.x, tmp_blob.rect.x + tmp_blob.rect.w - 1, &tmp_blob.x_hist_bins, &tmp_blob.x_hist_bins_count,
+                        #ifndef FINDBLOBS_LIGHTWEIGHT
+                        if (x_hist_bins_max) merge_bins(lnk_blob.rect.x, lnk_blob.rect.x + lnk_blob.rect.w - 1,
+                                                        #ifndef FINDBLOBS_LIGHTWEIGHT
+                                                        &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count,
+                                                        #else
+                                                        NULL, NULL,
+                                                        #endif
+                                                        tmp_blob.rect.x, tmp_blob.rect.x + tmp_blob.rect.w - 1,
+                                                        #ifndef FINDBLOBS_LIGHTWEIGHT
+                                                        &tmp_blob.x_hist_bins, &tmp_blob.x_hist_bins_count,
+                                                        #else
+                                                        NULL, NULL,
+                                                        #endif
                                                         x_hist_bins_max);
-                        if (y_hist_bins_max) merge_bins(lnk_blob.rect.y, lnk_blob.rect.y + lnk_blob.rect.h - 1, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count,
-                                                        tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1, &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
+                        if (y_hist_bins_max) merge_bins(lnk_blob.rect.y, lnk_blob.rect.y + lnk_blob.rect.h - 1,
+                                                        #ifndef FINDBLOBS_LIGHTWEIGHT
+                                                        &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count,
+                                                        #else
+                                                        NULL, NULL,
+                                                        #endif
+                                                        tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1,
+                                                        #ifndef FINDBLOBS_LIGHTWEIGHT
+                                                        &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
+                                                        #else
+                                                        NULL, NULL,
+                                                        #endif
                                                         y_hist_bins_max);
+                        #endif
                         // Merge corners...
                         for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
                             float z_dst = (lnk_blob.corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
@@ -999,21 +1064,27 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
                         // Merge counters...
                         lnk_blob.pixels += tmp_blob.pixels; // won't overflow
+                        #ifndef FINDBLOBS_LIGHTWEIGHT
                         lnk_blob.perimeter += tmp_blob.perimeter; // won't overflow
+                        #endif
                         lnk_blob.code |= tmp_blob.code; // won't overflow
                         lnk_blob.count += tmp_blob.count; // won't overflow
                         // Merge accumulators...
                         lnk_blob.centroid_x_acc += tmp_blob.centroid_x_acc;
                         lnk_blob.centroid_y_acc += tmp_blob.centroid_y_acc;
+                        #ifndef FINDBLOBS_LIGHTWEIGHT
                         lnk_blob.rotation_acc_x += tmp_blob.rotation_acc_x;
                         lnk_blob.rotation_acc_y += tmp_blob.rotation_acc_y;
                         lnk_blob.roundness_acc += tmp_blob.roundness_acc;
+                        #endif
                         // Compute current values...
                         lnk_blob.centroid_x = lnk_blob.centroid_x_acc / lnk_blob.pixels;
                         lnk_blob.centroid_y = lnk_blob.centroid_y_acc / lnk_blob.pixels;
+                        #ifndef FINDBLOBS_LIGHTWEIGHT
                         lnk_blob.rotation = fast_atan2f(lnk_blob.rotation_acc_y / lnk_blob.pixels,
                                                         lnk_blob.rotation_acc_x / lnk_blob.pixels);
                         lnk_blob.roundness = lnk_blob.roundness_acc / lnk_blob.pixels;
+                        #endif
                         merge_occured = true;
                     } else {
                         list_push_back(out, &tmp_blob);

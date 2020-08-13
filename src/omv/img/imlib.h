@@ -1051,16 +1051,32 @@ typedef struct statistics {
     int8_t BMean, BMedian, BMode, BSTDev, BMin, BMax, BLQ, BUQ;
 } statistics_t;
 
+#ifndef FINDBLOBS_LIGHTWEIGHT
 #define FIND_BLOBS_CORNERS_RESOLUTION 20 // multiple of 4
+#else
+#define FIND_BLOBS_CORNERS_RESOLUTION 12 // multiple of 4
+#endif
 #define FIND_BLOBS_ANGLE_RESOLUTION (360 / FIND_BLOBS_CORNERS_RESOLUTION)
 
 typedef struct find_blobs_list_lnk_data {
     point_t corners[FIND_BLOBS_CORNERS_RESOLUTION];
     rectangle_t rect;
-    uint32_t pixels, perimeter, code, count;
-    float centroid_x, centroid_y, rotation, roundness;
+    uint32_t pixels;
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    uint32_t perimeter;
+    #endif
+    uint32_t code, count;
+    float centroid_x, centroid_y;
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    float rotation, roundness;
+    #endif
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     uint16_t x_hist_bins_count, y_hist_bins_count, *x_hist_bins, *y_hist_bins;
-    float centroid_x_acc, centroid_y_acc, rotation_acc_x, rotation_acc_y, roundness_acc;
+    #endif
+    float centroid_x_acc, centroid_y_acc;
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    float rotation_acc_x, rotation_acc_y, roundness_acc;
+    #endif
 } find_blobs_list_lnk_data_t;
 
 typedef struct find_lines_list_lnk_data {

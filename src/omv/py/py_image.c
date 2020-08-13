@@ -4337,9 +4337,16 @@ typedef struct py_blob_obj {
     mp_obj_base_t base;
     mp_obj_t corners;
     mp_obj_t min_corners;
-    mp_obj_t x, y, w, h, pixels, cx, cy, rotation, code, count, perimeter, roundness;
+    mp_obj_t x, y, w, h, pixels, cx, cy;
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    mp_obj_t rotation;
+    #endif
+    mp_obj_t code, count;
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    mp_obj_t perimeter, roundness;
     mp_obj_t x_hist_bins;
     mp_obj_t y_hist_bins;
+    #endif
 } py_blob_obj_t;
 
 static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
@@ -4356,11 +4363,26 @@ static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_ki
               mp_obj_get_int(self->pixels),
               fast_roundf(mp_obj_get_float(self->cx)),
               fast_roundf(mp_obj_get_float(self->cy)),
-              (double) mp_obj_get_float(self->rotation),
+              #ifndef FINDBLOBS_LIGHTWEIGHT
+                 (double) mp_obj_get_float(self->rotation)
+              #else
+                 0
+              #endif
+              ,
               mp_obj_get_int(self->code),
               mp_obj_get_int(self->count),
-              mp_obj_get_int(self->perimeter),
-              (double) mp_obj_get_float(self->roundness));
+              #ifndef FINDBLOBS_LIGHTWEIGHT
+                 mp_obj_get_int(self->perimeter)
+              #else
+                 0
+              #endif
+              ,
+              #ifndef FINDBLOBS_LIGHTWEIGHT
+                 (double) mp_obj_get_float(self->roundness)
+              #else
+                 0
+              #endif
+              );
 }
 
 static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
@@ -4384,11 +4406,26 @@ static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
             case 4: return self->pixels;
             case 5: return mp_obj_new_int(fast_roundf(mp_obj_get_float(self->cx)));
             case 6: return mp_obj_new_int(fast_roundf(mp_obj_get_float(self->cy)));
-            case 7: return self->rotation;
+            case 7: return
+                #ifndef FINDBLOBS_LIGHTWEIGHT
+                    self->rotation;
+                #else
+                    0;
+                #endif
             case 8: return self->code;
             case 9: return self->count;
-            case 10: return self->perimeter;
-            case 11: return self->roundness;
+            case 10: return
+                #ifndef FINDBLOBS_LIGHTWEIGHT
+                    self->perimeter;
+                #else
+                    0;
+                #endif
+            case 11: return
+                #ifndef FINDBLOBS_LIGHTWEIGHT
+                    self->roundness;
+                #else
+                    0;
+                #endif
         }
     }
     return MP_OBJ_NULL; // op not supported
@@ -4413,14 +4450,18 @@ mp_obj_t py_blob_cx(mp_obj_t self_in) { return mp_obj_new_int(fast_roundf(mp_obj
 mp_obj_t py_blob_cxf(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cx; }
 mp_obj_t py_blob_cy(mp_obj_t self_in) { return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_blob_obj_t *) self_in)->cy))); }
 mp_obj_t py_blob_cyf(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cy; }
+#ifndef FINDBLOBS_LIGHTWEIGHT
 mp_obj_t py_blob_rotation(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->rotation; }
 mp_obj_t py_blob_rotation_deg(mp_obj_t self_in) { return mp_obj_new_int(IM_RAD2DEG(mp_obj_get_float(((py_blob_obj_t *) self_in)->rotation))); }
 mp_obj_t py_blob_rotation_rad(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->rotation; }
+#endif
 mp_obj_t py_blob_code(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->code; }
 mp_obj_t py_blob_count(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->count; }
+#ifndef FINDBLOBS_LIGHTWEIGHT
 mp_obj_t py_blob_perimeter(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->perimeter; }
 mp_obj_t py_blob_roundness(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->roundness; }
 mp_obj_t py_blob_elongation(mp_obj_t self_in) { return mp_obj_new_float(1 - mp_obj_get_float(((py_blob_obj_t *) self_in)->roundness)); }
+#endif
 mp_obj_t py_blob_area(mp_obj_t self_in) {
     return mp_obj_new_int(mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h));
 }
@@ -4429,6 +4470,7 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_DIV(pixels, ((float) area)));
 }
+#ifndef FINDBLOBS_LIGHTWEIGHT
 // Rect-area versus pixels (e.g. blob area) -> Above.
 // Rect-area versus perimeter -> Basically the same as the above with a different scale factor.
 // Rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
@@ -4438,6 +4480,7 @@ mp_obj_t py_blob_compactness(mp_obj_t self_in) {
     float perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
     return mp_obj_new_float(IM_DIV((pixels * 4 * M_PI), (perimeter * perimeter)));
 }
+#endif
 mp_obj_t py_blob_solidity(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4461,6 +4504,7 @@ mp_obj_t py_blob_solidity(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_MIN(IM_DIV(pixels, min_area), 1));
 }
+#ifndef FINDBLOBS_LIGHTWEIGHT
 mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4486,12 +4530,15 @@ mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     int perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
     return mp_obj_new_float(IM_MIN(IM_DIV(d0 + d1 + d2 + d3, perimeter), 1));
 }
+#endif
+#ifndef FINDBLOBS_LIGHTWEIGHT
 // Min rect-area versus pixels (e.g. blob area) -> Above.
 // Min rect-area versus perimeter -> Basically the same as the above with a different scale factor.
 // Min rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
 // Min rect-perimeter versus perimeter -> Above
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
+#endif
 mp_obj_t py_blob_major_axis_line(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4674,21 +4721,29 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cx_obj, py_blob_cx);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cxf_obj, py_blob_cxf);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cy_obj, py_blob_cy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cyf_obj, py_blob_cyf);
+#ifndef FINDBLOBS_LIGHTWEIGHT
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_deg_obj, py_blob_rotation_deg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_rad_obj, py_blob_rotation_rad);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
+#ifndef FINDBLOBS_LIGHTWEIGHT
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_perimeter_obj, py_blob_perimeter);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_roundness_obj, py_blob_roundness);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_elongation_obj, py_blob_elongation);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
+#ifndef FINDBLOBS_LIGHTWEIGHT
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_compactness_obj, py_blob_compactness);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_solidity_obj, py_blob_solidity);
+#ifndef FINDBLOBS_LIGHTWEIGHT
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_convexity_obj, py_blob_convexity);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_major_axis_line_obj, py_blob_major_axis_line);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_minor_axis_line_obj, py_blob_minor_axis_line);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_enclosing_circle_obj, py_blob_enclosing_circle);
@@ -4707,22 +4762,30 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_cxf), MP_ROM_PTR(&py_blob_cxf_obj) },
     { MP_ROM_QSTR(MP_QSTR_cy), MP_ROM_PTR(&py_blob_cy_obj) },
     { MP_ROM_QSTR(MP_QSTR_cyf), MP_ROM_PTR(&py_blob_cyf_obj) },
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_blob_rotation_obj) },
     { MP_ROM_QSTR(MP_QSTR_rotation_deg), MP_ROM_PTR(&py_blob_rotation_deg_obj) },
     { MP_ROM_QSTR(MP_QSTR_rotation_rad), MP_ROM_PTR(&py_blob_rotation_rad_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_code), MP_ROM_PTR(&py_blob_code_obj) },
     { MP_ROM_QSTR(MP_QSTR_count), MP_ROM_PTR(&py_blob_count_obj) },
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     { MP_ROM_QSTR(MP_QSTR_perimeter), MP_ROM_PTR(&py_blob_perimeter_obj) },
     { MP_ROM_QSTR(MP_QSTR_roundness), MP_ROM_PTR(&py_blob_roundness_obj) },
     { MP_ROM_QSTR(MP_QSTR_elongation), MP_ROM_PTR(&py_blob_elongation_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_area), MP_ROM_PTR(&py_blob_area_obj) } ,
     { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) },
     { MP_ROM_QSTR(MP_QSTR_extent), MP_ROM_PTR(&py_blob_density_obj) },
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     { MP_ROM_QSTR(MP_QSTR_compactness), MP_ROM_PTR(&py_blob_compactness_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_solidity), MP_ROM_PTR(&py_blob_solidity_obj) },
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     { MP_ROM_QSTR(MP_QSTR_convexity), MP_ROM_PTR(&py_blob_convexity_obj) },
     { MP_ROM_QSTR(MP_QSTR_x_hist_bins), MP_ROM_PTR(&py_blob_x_hist_bins_obj) },
     { MP_ROM_QSTR(MP_QSTR_y_hist_bins), MP_ROM_PTR(&py_blob_y_hist_bins_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_major_axis_line), MP_ROM_PTR(&py_blob_major_axis_line_obj) },
     { MP_ROM_QSTR(MP_QSTR_minor_axis_line), MP_ROM_PTR(&py_blob_minor_axis_line_obj) },
     { MP_ROM_QSTR(MP_QSTR_enclosing_circle), MP_ROM_PTR(&py_blob_enclosing_circle_obj) },
@@ -4766,14 +4829,19 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
     o->pixels = mp_obj_new_int(blob->pixels);
     o->cx = mp_obj_new_float(blob->centroid_x);
     o->cy = mp_obj_new_float(blob->centroid_y);
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o->rotation = mp_obj_new_float(blob->rotation);
+    #endif
     o->code = mp_obj_new_int(blob->code);
     o->count = mp_obj_new_int(blob->count);
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o->perimeter = mp_obj_new_int(blob->perimeter);
     o->roundness = mp_obj_new_float(blob->roundness);
     o->x_hist_bins = mp_obj_new_list(blob->x_hist_bins_count, NULL);
     o->y_hist_bins = mp_obj_new_list(blob->y_hist_bins_count, NULL);
+    #endif
 
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     for (int i = 0; i < blob->x_hist_bins_count; i++) {
         ((mp_obj_list_t *) o->x_hist_bins)->items[i] = mp_obj_new_int(blob->x_hist_bins[i]);
     }
@@ -4781,6 +4849,7 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
     for (int i = 0; i < blob->y_hist_bins_count; i++) {
         ((mp_obj_list_t *) o->y_hist_bins)->items[i] = mp_obj_new_int(blob->y_hist_bins[i]);
     }
+    #endif
 
     return mp_obj_is_true(mp_call_function_1(fun_obj, o));
 }
@@ -4812,14 +4881,19 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o0->pixels = mp_obj_new_int(blob0->pixels);
     o0->cx = mp_obj_new_float(blob0->centroid_x);
     o0->cy = mp_obj_new_float(blob0->centroid_y);
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o0->rotation = mp_obj_new_float(blob0->rotation);
+    #endif
     o0->code = mp_obj_new_int(blob0->code);
     o0->count = mp_obj_new_int(blob0->count);
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o0->perimeter = mp_obj_new_int(blob0->perimeter);
     o0->roundness = mp_obj_new_float(blob0->roundness);
     o0->x_hist_bins = mp_obj_new_list(blob0->x_hist_bins_count, NULL);
     o0->y_hist_bins = mp_obj_new_list(blob0->y_hist_bins_count, NULL);
+    #endif
 
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     for (int i = 0; i < blob0->x_hist_bins_count; i++) {
         ((mp_obj_list_t *) o0->x_hist_bins)->items[i] = mp_obj_new_int(blob0->x_hist_bins[i]);
     }
@@ -4827,6 +4901,7 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     for (int i = 0; i < blob0->y_hist_bins_count; i++) {
         ((mp_obj_list_t *) o0->y_hist_bins)->items[i] = mp_obj_new_int(blob0->y_hist_bins[i]);
     }
+    #endif
 
     py_blob_obj_t *o1 = m_new_obj(py_blob_obj_t);
     o1->base.type = &py_blob_type;
@@ -4853,14 +4928,19 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o1->pixels = mp_obj_new_int(blob1->pixels);
     o1->cx = mp_obj_new_float(blob1->centroid_x);
     o1->cy = mp_obj_new_float(blob1->centroid_y);
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o1->rotation = mp_obj_new_float(blob1->rotation);
+    #endif
     o1->code = mp_obj_new_int(blob1->code);
     o1->count = mp_obj_new_int(blob1->count);
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o1->perimeter = mp_obj_new_int(blob1->perimeter);
     o1->roundness = mp_obj_new_float(blob1->roundness);
     o1->x_hist_bins = mp_obj_new_list(blob1->x_hist_bins_count, NULL);
     o1->y_hist_bins = mp_obj_new_list(blob1->y_hist_bins_count, NULL);
+    #endif
 
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     for (int i = 0; i < blob1->x_hist_bins_count; i++) {
         ((mp_obj_list_t *) o1->x_hist_bins)->items[i] = mp_obj_new_int(blob1->x_hist_bins[i]);
     }
@@ -4868,6 +4948,7 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     for (int i = 0; i < blob1->y_hist_bins_count; i++) {
         ((mp_obj_list_t *) o1->y_hist_bins)->items[i] = mp_obj_new_int(blob1->y_hist_bins[i]);
     }
+    #endif
 
     return mp_obj_is_true(mp_call_function_2(fun_obj, o0, o1));
 }
@@ -4946,14 +5027,19 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
         o->pixels = mp_obj_new_int(lnk_data.pixels);
         o->cx = mp_obj_new_float(lnk_data.centroid_x);
         o->cy = mp_obj_new_float(lnk_data.centroid_y);
+        #ifndef FINDBLOBS_LIGHTWEIGHT
         o->rotation = mp_obj_new_float(lnk_data.rotation);
+        #endif
         o->code = mp_obj_new_int(lnk_data.code);
         o->count = mp_obj_new_int(lnk_data.count);
+        #ifndef FINDBLOBS_LIGHTWEIGHT
         o->perimeter = mp_obj_new_int(lnk_data.perimeter);
         o->roundness = mp_obj_new_float(lnk_data.roundness);
         o->x_hist_bins = mp_obj_new_list(lnk_data.x_hist_bins_count, NULL);
         o->y_hist_bins = mp_obj_new_list(lnk_data.y_hist_bins_count, NULL);
+        #endif
 
+        #ifndef FINDBLOBS_LIGHTWEIGHT
         for (int i = 0; i < lnk_data.x_hist_bins_count; i++) {
             ((mp_obj_list_t *) o->x_hist_bins)->items[i] = mp_obj_new_int(lnk_data.x_hist_bins[i]);
         }
@@ -4961,10 +5047,13 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
         for (int i = 0; i < lnk_data.y_hist_bins_count; i++) {
             ((mp_obj_list_t *) o->y_hist_bins)->items[i] = mp_obj_new_int(lnk_data.y_hist_bins[i]);
         }
+        #endif
 
         objects_list->items[i] = o;
+        #ifndef FINDBLOBS_LIGHTWEIGHT
         if (lnk_data.x_hist_bins) xfree(lnk_data.x_hist_bins);
         if (lnk_data.y_hist_bins) xfree(lnk_data.y_hist_bins);
+        #endif
     }
 
     return objects_list;

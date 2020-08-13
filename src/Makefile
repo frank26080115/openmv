@@ -71,6 +71,8 @@ else
 CFLAGS += -O2 -ggdb3 -DNDEBUG
 endif
 
+CFLAGS += -DFINDBLOBS_LIGHTWEIGHT
+
 # OpenMV1 is No longer supported
 ifeq ($(TARGET), OPENMV1)
 BRACKET = :)
