@@ -136,7 +136,7 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c)
 #endif
 
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
-                      list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
+                      list_t *thresholds, bool invert, signed int area_threshold, signed int pixels_threshold,
                       bool merge, int margin,
                       bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
                       bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg,
@@ -357,12 +357,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             }
 
                             rectangle_t rect;
+                            uint32_t rect_area;
                             rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
                             rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
                             rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
                             rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+                            rect_area = rect.w * rect.h;
 
-                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
+                            if (((area_threshold >= 0 && rect_area >= area_threshold) || (area_threshold < 0 && rect_area <= -area_threshold)) && ((pixels_threshold >= 0 && blob_pixels >= pixels_threshold) || (pixels_threshold < 0 && blob_pixels <= -pixels_threshold))) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
@@ -633,12 +635,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             }
 
                             rectangle_t rect;
+                            uint32_t rect_area;
                             rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
                             rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
                             rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
                             rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+                            rect_area = rect.w * rect.h;
 
-                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
+                            if (((area_threshold >= 0 && rect_area >= area_threshold) || (area_threshold < 0 && rect_area <= -area_threshold)) && ((pixels_threshold >= 0 && blob_pixels >= pixels_threshold) || (pixels_threshold < 0 && blob_pixels <= -pixels_threshold))) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
@@ -909,12 +913,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             }
 
                             rectangle_t rect;
+                            uint32_t rect_area;
                             rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
                             rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
                             rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
                             rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+                            rect_area = rect.w * rect.h;
 
-                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
+                            if (((area_threshold >= 0 && rect_area >= area_threshold) || (area_threshold < 0 && rect_area <= -area_threshold)) && ((pixels_threshold >= 0 && blob_pixels >= pixels_threshold) || (pixels_threshold < 0 && blob_pixels <= -pixels_threshold))) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
