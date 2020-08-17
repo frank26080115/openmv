@@ -162,7 +162,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
     list_init(out, sizeof(find_blobs_list_lnk_data_t));
 
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     size_t code = 0;
+    #endif
+
     for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
         color_thresholds_list_lnk_data_t lnk_data;
         iterator_get(thresholds, it, &lnk_data);
@@ -392,8 +395,12 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.perimeter = blob_perimeter;
                                 #endif
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.code = 1 << code;
+                                #endif
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.count = 1;
+                                #endif
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
                                 #ifndef FINDBLOBS_LIGHTWEIGHT
@@ -664,8 +671,12 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.perimeter = blob_perimeter;
                                 #endif
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.code = 1 << code;
+                                #endif
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.count = 1;
+                                #endif
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
                                 #ifndef FINDBLOBS_LIGHTWEIGHT
@@ -936,8 +947,12 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.perimeter = blob_perimeter;
                                 #endif
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.code = 1 << code;
+                                #endif
+                                #ifndef FINDBLOBS_LIGHTWEIGHT
                                 lnk_blob.count = 1;
+                                #endif
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
                                 #ifndef FINDBLOBS_LIGHTWEIGHT
@@ -989,7 +1004,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
             }
         }
 
+        #ifndef FINDBLOBS_LIGHTWEIGHT
         code += 1;
+        #endif
     }
 
     lifo_free(&lifo);
@@ -1067,8 +1084,12 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         #ifndef FINDBLOBS_LIGHTWEIGHT
                         lnk_blob.perimeter += tmp_blob.perimeter; // won't overflow
                         #endif
+                        #ifndef FINDBLOBS_LIGHTWEIGHT
                         lnk_blob.code |= tmp_blob.code; // won't overflow
+                        #endif
+                        #ifndef FINDBLOBS_LIGHTWEIGHT
                         lnk_blob.count += tmp_blob.count; // won't overflow
+                        #endif
                         // Merge accumulators...
                         lnk_blob.centroid_x_acc += tmp_blob.centroid_x_acc;
                         lnk_blob.centroid_y_acc += tmp_blob.centroid_y_acc;

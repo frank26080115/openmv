@@ -1065,7 +1065,12 @@ typedef struct find_blobs_list_lnk_data {
     #ifndef FINDBLOBS_LIGHTWEIGHT
     uint32_t perimeter;
     #endif
-    uint32_t code, count;
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    uint32_t code;
+    #endif
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    uint32_t count;
+    #endif
     float centroid_x, centroid_y;
     #ifndef FINDBLOBS_LIGHTWEIGHT
     float rotation, roundness;

@@ -4341,7 +4341,12 @@ typedef struct py_blob_obj {
     #ifndef FINDBLOBS_LIGHTWEIGHT
     mp_obj_t rotation;
     #endif
-    mp_obj_t code, count;
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    mp_obj_t code;
+    #endif
+    #ifndef FINDBLOBS_LIGHTWEIGHT
+    mp_obj_t count;
+    #endif
     #ifndef FINDBLOBS_LIGHTWEIGHT
     mp_obj_t perimeter, roundness;
     mp_obj_t x_hist_bins;
@@ -4369,8 +4374,18 @@ static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_ki
                  0
               #endif
               ,
-              mp_obj_get_int(self->code),
-              mp_obj_get_int(self->count),
+              #ifndef FINDBLOBS_LIGHTWEIGHT
+                mp_obj_get_int(self->code)
+              #else
+                0
+              #endif
+              ,
+              #ifndef FINDBLOBS_LIGHTWEIGHT
+                mp_obj_get_int(self->count)
+              #else
+                0
+              #endif
+              ,
               #ifndef FINDBLOBS_LIGHTWEIGHT
                  mp_obj_get_int(self->perimeter)
               #else
@@ -4412,8 +4427,18 @@ static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
                 #else
                     0;
                 #endif
-            case 8: return self->code;
-            case 9: return self->count;
+            case 8: return
+                #ifndef FINDBLOBS_LIGHTWEIGHT
+                    self->code;
+                #else
+                    0;
+                #endif
+            case 9: return
+                #ifndef FINDBLOBS_LIGHTWEIGHT
+                    self->count;
+                #else
+                    0;
+                #endif
             case 10: return
                 #ifndef FINDBLOBS_LIGHTWEIGHT
                     self->perimeter;
@@ -4455,8 +4480,10 @@ mp_obj_t py_blob_rotation(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)
 mp_obj_t py_blob_rotation_deg(mp_obj_t self_in) { return mp_obj_new_int(IM_RAD2DEG(mp_obj_get_float(((py_blob_obj_t *) self_in)->rotation))); }
 mp_obj_t py_blob_rotation_rad(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->rotation; }
 #endif
+#ifndef FINDBLOBS_LIGHTWEIGHT
 mp_obj_t py_blob_code(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->code; }
 mp_obj_t py_blob_count(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->count; }
+#endif
 #ifndef FINDBLOBS_LIGHTWEIGHT
 mp_obj_t py_blob_perimeter(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->perimeter; }
 mp_obj_t py_blob_roundness(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->roundness; }
@@ -4726,8 +4753,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_deg_obj, py_blob_rotation_deg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_rad_obj, py_blob_rotation_rad);
 #endif
+#ifndef FINDBLOBS_LIGHTWEIGHT
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
+#endif
 #ifndef FINDBLOBS_LIGHTWEIGHT
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_perimeter_obj, py_blob_perimeter);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_roundness_obj, py_blob_roundness);
@@ -4767,8 +4796,10 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_rotation_deg), MP_ROM_PTR(&py_blob_rotation_deg_obj) },
     { MP_ROM_QSTR(MP_QSTR_rotation_rad), MP_ROM_PTR(&py_blob_rotation_rad_obj) },
     #endif
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     { MP_ROM_QSTR(MP_QSTR_code), MP_ROM_PTR(&py_blob_code_obj) },
     { MP_ROM_QSTR(MP_QSTR_count), MP_ROM_PTR(&py_blob_count_obj) },
+    #endif
     #ifndef FINDBLOBS_LIGHTWEIGHT
     { MP_ROM_QSTR(MP_QSTR_perimeter), MP_ROM_PTR(&py_blob_perimeter_obj) },
     { MP_ROM_QSTR(MP_QSTR_roundness), MP_ROM_PTR(&py_blob_roundness_obj) },
@@ -4832,8 +4863,10 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
     #ifndef FINDBLOBS_LIGHTWEIGHT
     o->rotation = mp_obj_new_float(blob->rotation);
     #endif
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o->code = mp_obj_new_int(blob->code);
     o->count = mp_obj_new_int(blob->count);
+    #endif
     #ifndef FINDBLOBS_LIGHTWEIGHT
     o->perimeter = mp_obj_new_int(blob->perimeter);
     o->roundness = mp_obj_new_float(blob->roundness);
@@ -4884,8 +4917,10 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     #ifndef FINDBLOBS_LIGHTWEIGHT
     o0->rotation = mp_obj_new_float(blob0->rotation);
     #endif
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o0->code = mp_obj_new_int(blob0->code);
     o0->count = mp_obj_new_int(blob0->count);
+    #endif
     #ifndef FINDBLOBS_LIGHTWEIGHT
     o0->perimeter = mp_obj_new_int(blob0->perimeter);
     o0->roundness = mp_obj_new_float(blob0->roundness);
@@ -4931,8 +4966,10 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     #ifndef FINDBLOBS_LIGHTWEIGHT
     o1->rotation = mp_obj_new_float(blob1->rotation);
     #endif
+    #ifndef FINDBLOBS_LIGHTWEIGHT
     o1->code = mp_obj_new_int(blob1->code);
     o1->count = mp_obj_new_int(blob1->count);
+    #endif
     #ifndef FINDBLOBS_LIGHTWEIGHT
     o1->perimeter = mp_obj_new_int(blob1->perimeter);
     o1->roundness = mp_obj_new_float(blob1->roundness);
@@ -5030,8 +5067,10 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
         #ifndef FINDBLOBS_LIGHTWEIGHT
         o->rotation = mp_obj_new_float(lnk_data.rotation);
         #endif
+        #ifndef FINDBLOBS_LIGHTWEIGHT
         o->code = mp_obj_new_int(lnk_data.code);
         o->count = mp_obj_new_int(lnk_data.count);
+        #endif
         #ifndef FINDBLOBS_LIGHTWEIGHT
         o->perimeter = mp_obj_new_int(lnk_data.perimeter);
         o->roundness = mp_obj_new_float(lnk_data.roundness);
