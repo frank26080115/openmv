@@ -782,6 +782,16 @@ void winc_socket_close(int fd)
     WINC1500_EXPORT(close)(fd);
 }
 
+void winc_socket_closeall()
+{
+    WINC1500_EXPORT(closeall)();
+    // Initialize socket layer.
+    socketDeinit();
+    socketInit();
+    // Register sockets callback functions
+    registerSocketCallback(socket_callback, resolve_callback);
+}
+
 int winc_socket_bind(int fd, sockaddr *addr)
 {
     // Call bind and check HIF errors.
