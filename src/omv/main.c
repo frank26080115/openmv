@@ -487,8 +487,8 @@ soft_reset:
     fb_alloc_init0();
     file_buffer_init0();
     py_lcd_init0();
-    py_fir_init0();
-    py_tv_init0();
+    //py_fir_init0();
+    //py_tv_init0();
     servo_init();
     usbdbg_init();
     #if MICROPY_HW_ENABLE_SDCARD

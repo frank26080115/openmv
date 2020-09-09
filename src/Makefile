@@ -36,7 +36,7 @@ MAKE    = $(Q)make
 CAT     = $(Q)cat
 
 # Targets
-TARGET ?= OPENMV4
+TARGET ?= OPENMV4P
 OPENMV = openmv
 BOOTLOADER = bootloader
 UVC = uvc
@@ -50,14 +50,14 @@ CMSIS_DIR=cmsis
 STUSB_DIR=stusb
 MICROPY_DIR=micropython
 OMV_DIR=omv
-LEPTON_DIR=lepton
-MLX_DIR=mlx
+#LEPTON_DIR=lepton
+#MLX_DIR=mlx
 ST_DIR=st
-TENSORFLOW_DIR=libtf
+#TENSORFLOW_DIR=libtf
 WINC1500_DIR=winc1500
 BOOTLDR_DIR=bootloader
 UVC_DIR=uvc
-CUBEAI_DIR=stm32cubeai
+#CUBEAI_DIR=stm32cubeai
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/boards/$(TARGET)/
 
@@ -128,7 +128,7 @@ endif
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
-OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/nn/
+#OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/nn/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
@@ -168,19 +168,19 @@ LIBS = -lgcc
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/ActivationFunctions/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/FullyConnectedFunctions/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/NNSupportFunctions/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/PoolingFunctions/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/SoftmaxFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/ActivationFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/FullyConnectedFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/NNSupportFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/PoolingFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/SoftmaxFunctions/*.o)
 ifeq ($(CUBEAI),)
 # Conflicts with NetworkRuntime library.
-FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/ConvolutionFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/ConvolutionFunctions/*.o)
 endif
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
 ifeq ($(MICROPY_PY_IMU), 1)
 FIRM_OBJ += $(wildcard $(BUILD)/$(ST_DIR)/src/*.o)
 endif
@@ -207,7 +207,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	ov7725.o                                \
 	ov9650.o                                \
 	mt9v034.o                               \
-	lepton.o                                \
 	hm01b0.o                                \
 	sensor.o                                \
 	stm32fxxx_hal_msp.o                     \
@@ -270,9 +269,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	selective_search.o                      \
 	)
 
-FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/nn/,\
-	nn.o                                    \
-	)
+#FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/nn/,\
+#	nn.o                                    \
+#	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_helper.o                             \
@@ -281,15 +280,10 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_image.o                              \
 	py_time.o                               \
 	py_lcd.o                                \
-	py_tv.o                                 \
-	py_fir.o                                \
 	py_gif.o                                \
 	py_mjpeg.o                              \
 	py_winc.o                               \
 	py_cpufreq.o                            \
-	py_nn.o                                 \
-	py_tf.o                                 \
-	py_imu.o                                \
 	)
 
 
@@ -532,7 +526,6 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	ov7725.o                                \
 	ov9650.o                                \
 	mt9v034.o                               \
-	lepton.o                                \
 	hm01b0.o                                \
 	sensor.o                                \
 	stm32fxxx_hal_msp.o                     \
@@ -591,8 +584,8 @@ FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(CMSIS_DIR)                BUILD=$(BUILD)/$(CMSIS_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 	$(MAKE)  -C $(STHAL_DIR)                BUILD=$(BUILD)/$(STHAL_DIR)    CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MICROPY_DIR)/ports/stm32  BUILD=$(BUILD)/$(MICROPY_DIR)  BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)"
-	$(MAKE)  -C $(LEPTON_DIR)               BUILD=$(BUILD)/$(LEPTON_DIR)   CFLAGS="$(CFLAGS) -MMD"
-	$(MAKE)  -C $(MLX_DIR)                  BUILD=$(BUILD)/$(MLX_DIR)      CFLAGS="$(CFLAGS) -MMD"
+#	$(MAKE)  -C $(LEPTON_DIR)               BUILD=$(BUILD)/$(LEPTON_DIR)   CFLAGS="$(CFLAGS) -MMD"
+#	$(MAKE)  -C $(MLX_DIR)                  BUILD=$(BUILD)/$(MLX_DIR)      CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(MICROPY_PY_IMU), 1)
 	$(MAKE)  -C $(ST_DIR)                   BUILD=$(BUILD)/$(ST_DIR)       CFLAGS="$(CFLAGS) -MMD"
 endif
@@ -601,7 +594,7 @@ ifeq ($(MICROPY_PY_WINC1500), 1)
 endif
 	$(MAKE)  -C $(OMV_DIR)                  BUILD=$(BUILD)/$(OMV_DIR)      CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(CUBEAI), 1)
-	$(MAKE)  -C $(CUBEAI_DIR)               BUILD=$(BUILD)/$(CUBEAI_DIR)   CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
+#	$(MAKE)  -C $(CUBEAI_DIR)               BUILD=$(BUILD)/$(CUBEAI_DIR)   CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 endif
 
 UVC_OBJS: FIRMWARE_OBJS

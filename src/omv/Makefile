@@ -25,7 +25,6 @@ SRCS += $(addprefix ,   \
 	ov7725.c            \
 	ov9650.c            \
 	mt9v034.c           \
-	lepton.c            \
 	hm01b0.c            \
 	sensor.c            \
 	stm32fxxx_hal_msp.c \
@@ -88,9 +87,9 @@ SRCS += $(addprefix img/,   \
 	selective_search.c      \
    )
 
-SRCS += $(addprefix nn/,    \
-	nn.c                    \
-   )
+#SRCS += $(addprefix nn/,    \
+#	nn.c                    \
+#   )
 
 
 SRCS += $(addprefix py/, \
@@ -100,15 +99,10 @@ SRCS += $(addprefix py/, \
 	py_image.c              \
 	py_time.c               \
 	py_lcd.c                \
-	py_tv.c                 \
-	py_fir.c                \
 	py_gif.c                \
 	py_mjpeg.c              \
 	py_winc.c               \
 	py_cpufreq.c            \
-	py_nn.c                 \
-	py_tf.c                 \
-	py_imu.c                \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
