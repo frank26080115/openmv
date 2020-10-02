@@ -40,6 +40,7 @@ static uint8_t *dest_fb = NULL;
 static volatile int offset = 0;
 static volatile bool jpeg_buffer_overflow = false;
 static volatile bool waiting_for_data = false;
+static volatile uint32_t frame_timestamp = 0;
 
 const int resolution[][2] = {
     {0,    0   },
@@ -1095,6 +1096,7 @@ void *unaligned_memcpy(void *dest, void *src, size_t n)
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
     waiting_for_data = false;
+    frame_timestamp = HAL_GetTick();
 }
 
 // This function is called back after each line transfer is complete,
@@ -1593,6 +1595,7 @@ int sensor_snapshot_finish(sensor_t *sensor, image_t *image)
         image->h = MAIN_FB()->h;
         image->bpp = MAIN_FB()->bpp;
         image->pixels = MAIN_FB()->pixels;
+        image->timestamp = frame_timestamp;
     }
 
     return 0;

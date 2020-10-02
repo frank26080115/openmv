@@ -633,6 +633,12 @@ static mp_obj_t py_image_size(mp_obj_t img_obj)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
 
+static mp_obj_t py_image_timestamp(mp_obj_t img_obj)
+{
+    return mp_obj_new_int(((image_t *) py_image_cobj(img_obj))->timestamp);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_timestamp_obj, py_image_timestamp);
+
 static mp_obj_t py_image_bytearray(mp_obj_t img_obj)
 {
     image_t *arg_img = (image_t *) py_image_cobj(img_obj);
@@ -764,6 +770,7 @@ static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_
     out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = arg_img->pixels;
+    out_img.timestamp = arg_img->timestamp;
     PY_ASSERT_TRUE_MSG(image_size(&out_img) <= image_size(arg_img), "Can't pool in place!");
 
     imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
@@ -790,6 +797,7 @@ static mp_obj_t py_image_mean_pooled(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_ob
     out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = xalloc(image_size(&out_img));
+    out_img.timestamp = arg_img->timestamp;
 
     imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
     return py_image_from_struct(&out_img);
@@ -817,6 +825,7 @@ static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map
     out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = arg_img->pixels;
+    out_img.timestamp = arg_img->timestamp;
     PY_ASSERT_TRUE_MSG(image_size(&out_img) <= image_size(arg_img), "Can't pool in place!");
 
     imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
@@ -846,6 +855,7 @@ static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_m
     out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = xalloc(image_size(&out_img));
+    out_img.timestamp = arg_img->timestamp;
 
     imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
     return py_image_from_struct(&out_img);
@@ -864,6 +874,7 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
     out.h = arg_img->h;
     out.bpp = IMAGE_BPP_BINARY;
     out.data = copy ? xalloc(image_size(&out)) : arg_img->data;
+    out.timestamp = arg_img->timestamp;
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -947,6 +958,7 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
     out.h = arg_img->h;
     out.bpp = IMAGE_BPP_GRAYSCALE;
     out.data = copy ? xalloc(image_size(&out)) : arg_img->data;
+    out.timestamp = arg_img->timestamp;
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -1040,6 +1052,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
     out.h = arg_img->h;
     out.bpp = IMAGE_BPP_RGB565;
     out.data = copy ? xalloc(image_size(&out)) : arg_img->data;
+    out.timestamp = arg_img->timestamp;
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -1171,6 +1184,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
     out.h = arg_img->h;
     out.bpp = IMAGE_BPP_RGB565;
     out.data = copy ? xalloc(image_size(&out)) : arg_img->data;
+    out.timestamp = arg_img->timestamp;
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -1463,6 +1477,7 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     image.h = fast_floorf(roi.h * arg_y_scale);
     PY_ASSERT_TRUE_MSG(image.h >= 1, "Output image height is 0!");
     image.bpp = arg_img->bpp;
+    image.timestamp = arg_img->timestamp;
     image.data = NULL;
 
     if (copy_to_fb) {
@@ -1542,12 +1557,14 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
             arg_img->w = image.w;
             arg_img->h = image.h;
             arg_img->bpp = image.bpp;
+            arg_img->timestamp = image.timestamp;
         }
     } else {
         if (arg_other) {
             arg_other->w = image.w;
             arg_other->h = image.h;
             arg_other->bpp = image.bpp;
+            arg_other->timestamp = image.timestamp;
         }
     }
 
@@ -6508,6 +6525,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_image_height_obj)},
     {MP_ROM_QSTR(MP_QSTR_format),              MP_ROM_PTR(&py_image_format_obj)},
     {MP_ROM_QSTR(MP_QSTR_size),                MP_ROM_PTR(&py_image_size_obj)},
+    {MP_ROM_QSTR(MP_QSTR_timestamp),           MP_ROM_PTR(&py_image_timestamp_obj)},
     {MP_ROM_QSTR(MP_QSTR_bytearray),           MP_ROM_PTR(&py_image_bytearray_obj)},
     {MP_ROM_QSTR(MP_QSTR_get_pixel),           MP_ROM_PTR(&py_image_get_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_set_pixel),           MP_ROM_PTR(&py_image_set_pixel_obj)},

@@ -382,6 +382,7 @@ typedef struct image {
         uint8_t *pixels;
         uint8_t *data;
     };
+    uint32_t timestamp;
 } image_t;
 
 void image_init(image_t *ptr, int w, int h, int bpp, void *data);

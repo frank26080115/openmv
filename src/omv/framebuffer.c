@@ -76,6 +76,7 @@ void framebuffer_initialize_image(image_t *img)
     img->h = framebuffer->h;
     img->bpp = framebuffer->bpp;
     img->data = framebuffer->pixels;
+    img->timestamp = HAL_GetTick();
 }
 
 static void initialize_jpeg_buf_from_image(image_t *img)
