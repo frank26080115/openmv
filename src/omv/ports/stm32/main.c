@@ -68,8 +68,10 @@
 
 #include "py_image.h"
 #include "py_lcd.h"
+#ifndef ASTROPHOTOGEAR
 #include "py_fir.h"
 #include "py_tv.h"
+#endif
 #include "py_imu.h"
 #include "py_audio.h"
 
@@ -490,8 +492,10 @@ soft_reset:
     // Initialise low-level sub-systems. Here we need to do the very basic
     // things like zeroing out memory and resetting any of the sub-systems.
     py_lcd_init0();
+    #ifndef ASTROPHOTOGEAR
     py_fir_init0();
     py_tv_init0();
+    #endif
     readline_init0();
     pin_init0();
     extint_init0();

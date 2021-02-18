@@ -83,16 +83,16 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 ifeq ($(MICROPY_PY_IMU), 1)
 FIRM_OBJ += $(wildcard $(BUILD)/$(LSM6DS3_DIR)/src/*.o)
 endif
 ifeq ($(MICROPY_PY_WINC1500), 1)
 FIRM_OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
 endif
-FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90621_DIR)/src/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90621_DIR)/src/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/, \
@@ -118,27 +118,22 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
-	ov2640.o                    \
 	ov5640.o                    \
-	ov7690.o                    \
-	ov7725.o                    \
-	ov9650.o                    \
-	mt9v034.o                   \
-	lepton.o                    \
-	hm01b0.o                    \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/modules/,   \
 	py_clock.o                  \
-	py_gif.o                    \
 	py_helper.o                 \
 	py_image.o                  \
 	py_imageio.o                \
-	py_mjpeg.o                  \
 	py_omv.o                    \
 	py_sensor.o                 \
-	py_tf.o                     \
-	py_fir.o                    \
+   )
+
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/modules/,   \
+	py_guidestar.o              \
+	py_guidepulser.o            \
+	py_mathhelper.o             \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
@@ -160,7 +155,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	font.o                      \
 	framebuffer.o               \
 	fsort.o                     \
-	gif.o                       \
 	haar.o                      \
 	hog.o                       \
 	hough.o                     \
@@ -174,7 +168,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	line.o                      \
 	lsd.o                       \
 	mathop.o                    \
-	mjpeg.o                     \
 	orb.o                       \
 	phasecorrelation.o          \
 	point.o                     \
@@ -354,7 +347,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	machine_signal.o    \
 	machine_pinbase.o   \
 	utime_mphal.o       \
-	modonewire.o        \
 	uos_dupterm.o       \
 	modframebuf.o       \
 	modbtree.o          \

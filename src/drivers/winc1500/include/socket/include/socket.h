@@ -1833,6 +1833,33 @@ NMI_API sint16 WINC1500_EXPORT(sendto)(SOCKET sock, void *pvSendBuffer, uint16 u
 NMI_API sint8 WINC1500_EXPORT(close)(SOCKET sock);
 /**@}*/     //CloseSocketFn
 
+
+/** @defgroup CloseSocketFn closeall
+ *  @ingroup SocketAPI
+ *  Synchronous close all sockets
+ */
+ /**@{*/
+/*!
+@fn	\
+	NMI_API sint8 closeall(SOCKET sock);
+
+@pre 
+		Sockets must be initialized through the call of the socketInit function.
+		@ref close is called only for valid socket identifiers created through the @ref socket function.
+		
+@warning
+	If @ref close is called while there are still pending messages (sent or received ) they will be discarded.
+
+@see
+	socketInit
+	socket
+
+@return
+	The function returns @ref SOCK_ERR_NO_ERROR
+*/
+NMI_API sint8 WINC1500_EXPORT(closeall)();
+/**@}*/     //CloseSocketFn
+
 /** @defgroup InetAddressFn nmi_inet_addr
 *  @ingroup SocketAPI
 *  Synchronous  function which returns a BSD socket compliant Internet Protocol (IPv4) socket address.

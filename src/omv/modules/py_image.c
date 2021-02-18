@@ -30,6 +30,8 @@
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
+#include "py_blob.h"
+
 #include "omv_boardconfig.h"
 #if defined(IMLIB_ENABLE_IMAGE_IO)
 #include "py_imageio.h"
@@ -647,6 +649,19 @@ static mp_obj_t py_image_size(mp_obj_t img_obj)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
 
+static mp_obj_t py_image_timestamp(mp_obj_t img_obj)
+{
+    return mp_obj_new_int(((image_t *) py_image_cobj(img_obj))->timestamp);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_timestamp_obj, py_image_timestamp);
+
+static mp_obj_t py_image_set_timestamp(mp_obj_t img_obj, mp_obj_t t)
+{
+    ((image_t *) py_image_cobj(img_obj))->timestamp = mp_obj_get_int(t);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_set_timestamp_obj, py_image_set_timestamp);
+
 static mp_obj_t py_image_bytearray(mp_obj_t img_obj)
 {
     image_t *arg_img = (image_t *) py_image_cobj(img_obj);
@@ -778,6 +793,7 @@ static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_
     out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = arg_img->pixels;
+    out_img.timestamp = arg_img->timestamp;
     PY_ASSERT_TRUE_MSG(image_size(&out_img) <= image_size(arg_img), "Can't pool in place!");
 
     imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
@@ -804,6 +820,7 @@ static mp_obj_t py_image_mean_pooled(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_ob
     out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = xalloc(image_size(&out_img));
+    out_img.timestamp = arg_img->timestamp;
 
     imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
     return py_image_from_struct(&out_img);
@@ -831,6 +848,7 @@ static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map
     out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = arg_img->pixels;
+    out_img.timestamp = arg_img->timestamp;
     PY_ASSERT_TRUE_MSG(image_size(&out_img) <= image_size(arg_img), "Can't pool in place!");
 
     imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
@@ -860,6 +878,7 @@ static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_m
     out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = xalloc(image_size(&out_img));
+    out_img.timestamp = arg_img->timestamp;
 
     imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
     return py_image_from_struct(&out_img);
@@ -947,6 +966,7 @@ static mp_obj_t py_image_to(int bpp, const uint16_t *default_color_palette, bool
     dst_img.w = fast_floorf(arg_roi.w * arg_x_scale);
     dst_img.h = fast_floorf(arg_roi.h * arg_y_scale);
     dst_img.bpp = (bpp >= 0) ? bpp : src_img->bpp;
+    dst_img.timestamp = src_img->timestamp;
 
     if (copy) {
         if (copy_to_fb) {
@@ -3844,6 +3864,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_regression_obj, 2, py_image_get_r
 ///////////////
 
 // Blob Object //
+#ifndef ASTROPHOTOGEAR
 #define py_blob_obj_size 12
 typedef struct py_blob_obj {
     mp_obj_base_t base;
@@ -3853,6 +3874,7 @@ typedef struct py_blob_obj {
     mp_obj_t x_hist_bins;
     mp_obj_t y_hist_bins;
 } py_blob_obj_t;
+#endif
 
 static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
@@ -3868,11 +3890,37 @@ static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_ki
               mp_obj_get_int(self->pixels),
               fast_roundf(mp_obj_get_float(self->cx)),
               fast_roundf(mp_obj_get_float(self->cy)),
-              (double) mp_obj_get_float(self->rotation),
-              mp_obj_get_int(self->code),
-              mp_obj_get_int(self->count),
-              mp_obj_get_int(self->perimeter),
-              (double) mp_obj_get_float(self->roundness));
+              #ifndef ASTROPHOTOGEAR
+                 (double) mp_obj_get_float(self->rotation)
+              #else
+                 0
+              #endif
+              ,
+              #ifndef ASTROPHOTOGEAR
+                mp_obj_get_int(self->code)
+              #else
+                0
+              #endif
+              ,
+              #ifndef ASTROPHOTOGEAR
+                mp_obj_get_int(self->count)
+              #else
+                0
+              #endif
+              ,
+              #ifndef ASTROPHOTOGEAR
+                 mp_obj_get_int(self->perimeter)
+              #else
+                 0
+              #endif
+              ,
+              #ifndef ASTROPHOTOGEAR
+                 (double) mp_obj_get_float(self->roundness)
+              #else
+                 0
+              #endif
+              );
+
 }
 
 static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
@@ -3896,11 +3944,36 @@ static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
             case 4: return self->pixels;
             case 5: return mp_obj_new_int(fast_roundf(mp_obj_get_float(self->cx)));
             case 6: return mp_obj_new_int(fast_roundf(mp_obj_get_float(self->cy)));
-            case 7: return self->rotation;
-            case 8: return self->code;
-            case 9: return self->count;
-            case 10: return self->perimeter;
-            case 11: return self->roundness;
+            case 7: return
+                #ifndef ASTROPHOTOGEAR
+                    self->rotation;
+                #else
+                    0;
+                #endif
+            case 8: return
+                #ifndef ASTROPHOTOGEAR
+                    self->code;
+                #else
+                    0;
+                #endif
+            case 9: return
+                #ifndef ASTROPHOTOGEAR
+                    self->count;
+                #else
+                    0;
+                #endif
+            case 10: return
+                #ifndef ASTROPHOTOGEAR
+                    self->perimeter;
+                #else
+                    0;
+                #endif
+            case 11: return
+                #ifndef ASTROPHOTOGEAR
+                    self->roundness;
+                #else
+                    0;
+                #endif
         }
     }
     return MP_OBJ_NULL; // op not supported
@@ -3925,14 +3998,36 @@ mp_obj_t py_blob_cx(mp_obj_t self_in) { return mp_obj_new_int(fast_roundf(mp_obj
 mp_obj_t py_blob_cxf(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cx; }
 mp_obj_t py_blob_cy(mp_obj_t self_in) { return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_blob_obj_t *) self_in)->cy))); }
 mp_obj_t py_blob_cyf(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cy; }
+
+mp_obj_t py_blob_move_coord(mp_obj_t self_in, mp_obj_t nx, mp_obj_t ny)
+{
+    ((py_blob_obj_t *) self_in)->cx = mp_obj_new_float(mp_obj_get_float(nx));
+    ((py_blob_obj_t *) self_in)->cy = mp_obj_new_float(mp_obj_get_float(ny));
+    return mp_const_none;
+}
+
+#ifndef ASTROPHOTOGEAR
 mp_obj_t py_blob_rotation(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->rotation; }
 mp_obj_t py_blob_rotation_deg(mp_obj_t self_in) { return mp_obj_new_int(IM_RAD2DEG(mp_obj_get_float(((py_blob_obj_t *) self_in)->rotation))); }
 mp_obj_t py_blob_rotation_rad(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->rotation; }
+#endif
+#ifndef ASTROPHOTOGEAR
 mp_obj_t py_blob_code(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->code; }
 mp_obj_t py_blob_count(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->count; }
+#endif
+#ifndef ASTROPHOTOGEAR
 mp_obj_t py_blob_perimeter(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->perimeter; }
 mp_obj_t py_blob_roundness(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->roundness; }
 mp_obj_t py_blob_elongation(mp_obj_t self_in) { return mp_obj_new_float(1 - mp_obj_get_float(((py_blob_obj_t *) self_in)->roundness)); }
+#endif
+
+//mp_obj_t py_blob_areacnt      (mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->area_cnt;       }
+mp_obj_t py_blob_maxbrightness(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->maxbrightness;  }
+mp_obj_t py_blob_brightnesssum(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->brightness;     }
+mp_obj_t py_blob_saturationcnt(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->saturation_cnt; }
+mp_obj_t py_blob_starpointiness(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->star_pointiness; }
+mp_obj_t py_blob_starprofile(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->star_profile; }
+
 mp_obj_t py_blob_area(mp_obj_t self_in) {
     return mp_obj_new_int(mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h));
 }
@@ -3941,6 +4036,7 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_DIV(pixels, ((float) area)));
 }
+#ifndef ASTROPHOTOGEAR
 // Rect-area versus pixels (e.g. blob area) -> Above.
 // Rect-area versus perimeter -> Basically the same as the above with a different scale factor.
 // Rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
@@ -3950,6 +4046,7 @@ mp_obj_t py_blob_compactness(mp_obj_t self_in) {
     float perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
     return mp_obj_new_float(IM_DIV((pixels * 4 * M_PI), (perimeter * perimeter)));
 }
+#endif
 mp_obj_t py_blob_solidity(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -3973,6 +4070,7 @@ mp_obj_t py_blob_solidity(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_MIN(IM_DIV(pixels, min_area), 1));
 }
+#ifndef ASTROPHOTOGEAR
 mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -3998,12 +4096,15 @@ mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     int perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
     return mp_obj_new_float(IM_MIN(IM_DIV(d0 + d1 + d2 + d3, perimeter), 1));
 }
+#endif
+#ifndef ASTROPHOTOGEAR
 // Min rect-area versus pixels (e.g. blob area) -> Above.
 // Min rect-area versus perimeter -> Basically the same as the above with a different scale factor.
 // Min rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
 // Min rect-perimeter versus perimeter -> Above
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
+#endif
 mp_obj_t py_blob_major_axis_line(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
@@ -4186,21 +4287,42 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cx_obj, py_blob_cx);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cxf_obj, py_blob_cxf);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cy_obj, py_blob_cy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cyf_obj, py_blob_cyf);
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_blob_move_coord_obj, py_blob_move_coord);
+
+#ifndef ASTROPHOTOGEAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_deg_obj, py_blob_rotation_deg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_rad_obj, py_blob_rotation_rad);
+#endif
+#ifndef ASTROPHOTOGEAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
+#endif
+#ifndef ASTROPHOTOGEAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_perimeter_obj, py_blob_perimeter);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_roundness_obj, py_blob_roundness);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_elongation_obj, py_blob_elongation);
+#endif
+
+//STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_areacnt_obj      , py_blob_areacnt      );
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_maxbrightness_obj,   py_blob_maxbrightness);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_brightnesssum_obj,   py_blob_brightnesssum);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_saturationcnt_obj,   py_blob_saturationcnt);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_starprofile_obj,     py_blob_starprofile);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_starpointiness_obj,  py_blob_starpointiness);
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
+#ifndef ASTROPHOTOGEAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_compactness_obj, py_blob_compactness);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_solidity_obj, py_blob_solidity);
+#ifndef ASTROPHOTOGEAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_convexity_obj, py_blob_convexity);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_major_axis_line_obj, py_blob_major_axis_line);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_minor_axis_line_obj, py_blob_minor_axis_line);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_enclosing_circle_obj, py_blob_enclosing_circle);
@@ -4219,22 +4341,41 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_cxf), MP_ROM_PTR(&py_blob_cxf_obj) },
     { MP_ROM_QSTR(MP_QSTR_cy), MP_ROM_PTR(&py_blob_cy_obj) },
     { MP_ROM_QSTR(MP_QSTR_cyf), MP_ROM_PTR(&py_blob_cyf_obj) },
+    { MP_ROM_QSTR(MP_QSTR_move_coord), MP_ROM_PTR(&py_blob_move_coord_obj) },
+    #ifndef ASTROPHOTOGEAR
     { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_blob_rotation_obj) },
     { MP_ROM_QSTR(MP_QSTR_rotation_deg), MP_ROM_PTR(&py_blob_rotation_deg_obj) },
     { MP_ROM_QSTR(MP_QSTR_rotation_rad), MP_ROM_PTR(&py_blob_rotation_rad_obj) },
+    #endif
+    #ifndef ASTROPHOTOGEAR
     { MP_ROM_QSTR(MP_QSTR_code), MP_ROM_PTR(&py_blob_code_obj) },
     { MP_ROM_QSTR(MP_QSTR_count), MP_ROM_PTR(&py_blob_count_obj) },
+    #endif
+    #ifndef ASTROPHOTOGEAR
     { MP_ROM_QSTR(MP_QSTR_perimeter), MP_ROM_PTR(&py_blob_perimeter_obj) },
     { MP_ROM_QSTR(MP_QSTR_roundness), MP_ROM_PTR(&py_blob_roundness_obj) },
     { MP_ROM_QSTR(MP_QSTR_elongation), MP_ROM_PTR(&py_blob_elongation_obj) },
+    #endif
+
+    //{ MP_ROM_QSTR(MP_QSTR_area_cnt),       MP_ROM_PTR(&py_blob_areacnt_obj) } ,
+    { MP_ROM_QSTR(MP_QSTR_max_brightness),  MP_ROM_PTR(&py_blob_maxbrightness_obj ) } ,
+    { MP_ROM_QSTR(MP_QSTR_brightness_sum),  MP_ROM_PTR(&py_blob_brightnesssum_obj ) } ,
+    { MP_ROM_QSTR(MP_QSTR_saturation_cnt),  MP_ROM_PTR(&py_blob_saturationcnt_obj ) } ,
+    { MP_ROM_QSTR(MP_QSTR_star_profile),    MP_ROM_PTR(&py_blob_starprofile_obj   ) } ,
+    { MP_ROM_QSTR(MP_QSTR_star_pointiness), MP_ROM_PTR(&py_blob_starpointiness_obj) } ,
+
     { MP_ROM_QSTR(MP_QSTR_area), MP_ROM_PTR(&py_blob_area_obj) } ,
     { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) },
     { MP_ROM_QSTR(MP_QSTR_extent), MP_ROM_PTR(&py_blob_density_obj) },
+    #ifndef ASTROPHOTOGEAR
     { MP_ROM_QSTR(MP_QSTR_compactness), MP_ROM_PTR(&py_blob_compactness_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_solidity), MP_ROM_PTR(&py_blob_solidity_obj) },
+    #ifndef ASTROPHOTOGEAR
     { MP_ROM_QSTR(MP_QSTR_convexity), MP_ROM_PTR(&py_blob_convexity_obj) },
     { MP_ROM_QSTR(MP_QSTR_x_hist_bins), MP_ROM_PTR(&py_blob_x_hist_bins_obj) },
     { MP_ROM_QSTR(MP_QSTR_y_hist_bins), MP_ROM_PTR(&py_blob_y_hist_bins_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_major_axis_line), MP_ROM_PTR(&py_blob_major_axis_line_obj) },
     { MP_ROM_QSTR(MP_QSTR_minor_axis_line), MP_ROM_PTR(&py_blob_minor_axis_line_obj) },
     { MP_ROM_QSTR(MP_QSTR_enclosing_circle), MP_ROM_PTR(&py_blob_enclosing_circle_obj) },
@@ -4278,14 +4419,27 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
     o->pixels = mp_obj_new_int(blob->pixels);
     o->cx = mp_obj_new_float(blob->centroid_x);
     o->cy = mp_obj_new_float(blob->centroid_y);
+
+    //o->area_cnt       = mp_obj_new_int((int)(blob->area_cnt));
+    o->maxbrightness  = mp_obj_new_int((int)(blob->maxbrightness));
+    o->brightness     = mp_obj_new_int((int)(blob->brightness));
+    o->saturation_cnt = mp_obj_new_int((int)(blob->saturation_cnt));
+
+    #ifndef ASTROPHOTOGEAR
     o->rotation = mp_obj_new_float(blob->rotation);
+    #endif
+    #ifndef ASTROPHOTOGEAR
     o->code = mp_obj_new_int(blob->code);
     o->count = mp_obj_new_int(blob->count);
+    #endif
+    #ifndef ASTROPHOTOGEAR
     o->perimeter = mp_obj_new_int(blob->perimeter);
     o->roundness = mp_obj_new_float(blob->roundness);
     o->x_hist_bins = mp_obj_new_list(blob->x_hist_bins_count, NULL);
     o->y_hist_bins = mp_obj_new_list(blob->y_hist_bins_count, NULL);
+    #endif
 
+    #ifndef ASTROPHOTOGEAR
     for (int i = 0; i < blob->x_hist_bins_count; i++) {
         ((mp_obj_list_t *) o->x_hist_bins)->items[i] = mp_obj_new_int(blob->x_hist_bins[i]);
     }
@@ -4293,6 +4447,7 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
     for (int i = 0; i < blob->y_hist_bins_count; i++) {
         ((mp_obj_list_t *) o->y_hist_bins)->items[i] = mp_obj_new_int(blob->y_hist_bins[i]);
     }
+    #endif
 
     return mp_obj_is_true(mp_call_function_1(fun_obj, o));
 }
@@ -4324,14 +4479,27 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o0->pixels = mp_obj_new_int(blob0->pixels);
     o0->cx = mp_obj_new_float(blob0->centroid_x);
     o0->cy = mp_obj_new_float(blob0->centroid_y);
+
+    //o0->area_cnt       = mp_obj_new_int((int)(blob0->area_cnt));
+    o0->maxbrightness  = mp_obj_new_int((int)(blob0->maxbrightness));
+    o0->brightness     = mp_obj_new_int((int)(blob0->brightness));
+    o0->saturation_cnt = mp_obj_new_int((int)(blob0->saturation_cnt));
+
+    #ifndef ASTROPHOTOGEAR
     o0->rotation = mp_obj_new_float(blob0->rotation);
+    #endif
+    #ifndef ASTROPHOTOGEAR
     o0->code = mp_obj_new_int(blob0->code);
     o0->count = mp_obj_new_int(blob0->count);
+    #endif
+    #ifndef ASTROPHOTOGEAR
     o0->perimeter = mp_obj_new_int(blob0->perimeter);
     o0->roundness = mp_obj_new_float(blob0->roundness);
     o0->x_hist_bins = mp_obj_new_list(blob0->x_hist_bins_count, NULL);
     o0->y_hist_bins = mp_obj_new_list(blob0->y_hist_bins_count, NULL);
+    #endif
 
+    #ifndef ASTROPHOTOGEAR
     for (int i = 0; i < blob0->x_hist_bins_count; i++) {
         ((mp_obj_list_t *) o0->x_hist_bins)->items[i] = mp_obj_new_int(blob0->x_hist_bins[i]);
     }
@@ -4339,6 +4507,7 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     for (int i = 0; i < blob0->y_hist_bins_count; i++) {
         ((mp_obj_list_t *) o0->y_hist_bins)->items[i] = mp_obj_new_int(blob0->y_hist_bins[i]);
     }
+    #endif
 
     py_blob_obj_t *o1 = m_new_obj(py_blob_obj_t);
     o1->base.type = &py_blob_type;
@@ -4365,14 +4534,27 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o1->pixels = mp_obj_new_int(blob1->pixels);
     o1->cx = mp_obj_new_float(blob1->centroid_x);
     o1->cy = mp_obj_new_float(blob1->centroid_y);
+
+    //o1->area_cnt       = mp_obj_new_int((int)(blob1->area_cnt));
+    o1->maxbrightness  = mp_obj_new_int((int)(blob1->maxbrightness));
+    o1->brightness     = mp_obj_new_int((int)(blob1->brightness));
+    o1->saturation_cnt = mp_obj_new_int((int)(blob1->saturation_cnt));
+
+    #ifndef ASTROPHOTOGEAR
     o1->rotation = mp_obj_new_float(blob1->rotation);
+    #endif
+    #ifndef ASTROPHOTOGEAR
     o1->code = mp_obj_new_int(blob1->code);
     o1->count = mp_obj_new_int(blob1->count);
+    #endif
+    #ifndef ASTROPHOTOGEAR
     o1->perimeter = mp_obj_new_int(blob1->perimeter);
     o1->roundness = mp_obj_new_float(blob1->roundness);
     o1->x_hist_bins = mp_obj_new_list(blob1->x_hist_bins_count, NULL);
     o1->y_hist_bins = mp_obj_new_list(blob1->y_hist_bins_count, NULL);
+    #endif
 
+    #ifndef ASTROPHOTOGEAR
     for (int i = 0; i < blob1->x_hist_bins_count; i++) {
         ((mp_obj_list_t *) o1->x_hist_bins)->items[i] = mp_obj_new_int(blob1->x_hist_bins[i]);
     }
@@ -4380,6 +4562,7 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     for (int i = 0; i < blob1->y_hist_bins_count; i++) {
         ((mp_obj_list_t *) o1->y_hist_bins)->items[i] = mp_obj_new_int(blob1->y_hist_bins[i]);
     }
+    #endif
 
     return mp_obj_is_true(mp_call_function_2(fun_obj, o0, o1));
 }
@@ -4403,27 +4586,33 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     unsigned int y_stride =
         py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_stride), 1);
     PY_ASSERT_TRUE_MSG(y_stride > 0, "y_stride must not be zero.");
-    unsigned int area_threshold =
+    signed int area_threshold =
         py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_area_threshold), 10);
-    unsigned int pixels_threshold =
+    signed int pixels_threshold =
         py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixels_threshold), 10);
+    signed int width_threshold =
+        py_helper_keyword_int(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width_threshold), 0);
+    signed int height_threshold =
+        py_helper_keyword_int(n_args, args, 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height_threshold), 0);
     bool merge =
-        py_helper_keyword_int(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge), false);
+        py_helper_keyword_int(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge), false);
     int margin =
-        py_helper_keyword_int(n_args, args, 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 0);
+        py_helper_keyword_int(n_args, args, 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 0);
     mp_obj_t threshold_cb =
-        py_helper_keyword_object(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold_cb), NULL);
+        py_helper_keyword_object(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold_cb), NULL);
     mp_obj_t merge_cb =
-        py_helper_keyword_object(n_args, args, 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge_cb), NULL);
+        py_helper_keyword_object(n_args, args, 13, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge_cb), NULL);
     unsigned int x_hist_bins_max =
-        py_helper_keyword_int(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_hist_bins_max), 0);
+        py_helper_keyword_int(n_args, args, 14, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_hist_bins_max), 0);
     unsigned int y_hist_bins_max =
-        py_helper_keyword_int(n_args, args, 13, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_hist_bins_max), 0);
+        py_helper_keyword_int(n_args, args, 15, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_hist_bins_max), 0);
+
+    bool guidestarmode = py_helper_keyword_int(n_args, args, 16, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_guidestarmode), false);
 
     list_t out;
     fb_alloc_mark();
     imlib_find_blobs(&out, arg_img, &roi, x_stride, y_stride, &thresholds, invert,
-            area_threshold, pixels_threshold, merge, margin,
+            area_threshold, pixels_threshold, width_threshold, height_threshold, merge, margin,
             py_image_find_blobs_threshold_cb, threshold_cb, py_image_find_blobs_merge_cb, merge_cb, x_hist_bins_max, y_hist_bins_max);
     fb_alloc_free_till_mark();
     list_free(&thresholds);
@@ -4458,14 +4647,25 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
         o->pixels = mp_obj_new_int(lnk_data.pixels);
         o->cx = mp_obj_new_float(lnk_data.centroid_x);
         o->cy = mp_obj_new_float(lnk_data.centroid_y);
+        //o->area_cnt       = mp_obj_new_int((int)(lnk_data.area_cnt));
+        o->maxbrightness  = mp_obj_new_int((int)(lnk_data.maxbrightness));
+        o->brightness     = mp_obj_new_int((int)(lnk_data.brightness));
+        o->saturation_cnt = mp_obj_new_int((int)(lnk_data.saturation_cnt));
+        #ifndef ASTROPHOTOGEAR
         o->rotation = mp_obj_new_float(lnk_data.rotation);
+        #endif
+        #ifndef ASTROPHOTOGEAR
         o->code = mp_obj_new_int(lnk_data.code);
         o->count = mp_obj_new_int(lnk_data.count);
+        #endif
+        #ifndef ASTROPHOTOGEAR
         o->perimeter = mp_obj_new_int(lnk_data.perimeter);
         o->roundness = mp_obj_new_float(lnk_data.roundness);
         o->x_hist_bins = mp_obj_new_list(lnk_data.x_hist_bins_count, NULL);
         o->y_hist_bins = mp_obj_new_list(lnk_data.y_hist_bins_count, NULL);
+        #endif
 
+        #ifndef ASTROPHOTOGEAR
         for (int i = 0; i < lnk_data.x_hist_bins_count; i++) {
             ((mp_obj_list_t *) o->x_hist_bins)->items[i] = mp_obj_new_int(lnk_data.x_hist_bins[i]);
         }
@@ -4473,10 +4673,31 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
         for (int i = 0; i < lnk_data.y_hist_bins_count; i++) {
             ((mp_obj_list_t *) o->y_hist_bins)->items[i] = mp_obj_new_int(lnk_data.y_hist_bins[i]);
         }
+        #endif
 
         objects_list->items[i] = o;
+        #ifndef ASTROPHOTOGEAR
         if (lnk_data.x_hist_bins) xfree(lnk_data.x_hist_bins);
         if (lnk_data.y_hist_bins) xfree(lnk_data.y_hist_bins);
+        #endif
+
+        if (guidestarmode) {
+            int radius = (lnk_data.rect.w + lnk_data.rect.h) / 3;
+            int* profilebuff = xalloc0(radius * sizeof(int));
+            int pointiness;
+            imlib_analyze_guidestar(arg_img, &lnk_data, radius, profilebuff, &pointiness);
+            o->star_pointiness = mp_obj_new_int(pointiness);
+            o->star_profile = mp_obj_new_list(radius, NULL);
+            for (int i = 0; i < radius; i++)
+            {
+                ((mp_obj_list_t *) o->star_profile)->items[i] = mp_obj_new_int(profilebuff[i]);
+            }
+            xfree(profilebuff);
+        }
+        else {
+            o->star_pointiness = mp_obj_new_int(0);
+            o->star_profile = mp_obj_new_list(0, NULL);
+        }
     }
 
     return objects_list;
@@ -5888,6 +6109,8 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_image_height_obj)},
     {MP_ROM_QSTR(MP_QSTR_format),              MP_ROM_PTR(&py_image_format_obj)},
     {MP_ROM_QSTR(MP_QSTR_size),                MP_ROM_PTR(&py_image_size_obj)},
+    {MP_ROM_QSTR(MP_QSTR_timestamp),           MP_ROM_PTR(&py_image_timestamp_obj)},
+    {MP_ROM_QSTR(MP_QSTR_set_timestamp),       MP_ROM_PTR(&py_image_set_timestamp_obj)},
     {MP_ROM_QSTR(MP_QSTR_bytearray),           MP_ROM_PTR(&py_image_bytearray_obj)},
     {MP_ROM_QSTR(MP_QSTR_get_pixel),           MP_ROM_PTR(&py_image_get_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_set_pixel),           MP_ROM_PTR(&py_image_set_pixel_obj)},

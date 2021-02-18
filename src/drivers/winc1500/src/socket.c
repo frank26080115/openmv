@@ -926,6 +926,32 @@ sint8 WINC1500_EXPORT(close)(SOCKET sock)
 }
 /*********************************************************************
 Function
+		closeall
+
+Description
+
+Return
+
+Author
+		Frank Zhao
+
+Version
+		1.0
+
+Date
+		18 Aug 2020
+*********************************************************************/
+sint8 WINC1500_EXPORT(closeall)()
+{
+    int sock;
+    for (sock = 0; sock < MAX_SOCKET; sock += 1) {
+        gastrSockets[sock].bIsUsed = 1;
+        WINC1500_EXPORT(close)((SOCKET)sock);
+    }
+    return SOCK_ERR_NO_ERROR;
+}
+/*********************************************************************
+Function
 		recvfrom
 
 Description

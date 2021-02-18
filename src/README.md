@@ -1,3 +1,14 @@
+# OpenMV Astrophotography Gear
+
+This fork and branch is built specifically for:
+
+https://frank26080115.github.io/OpenMV-Astrophotography-Gear/
+https://github.com/frank26080115/OpenMV-Astrophotography-Gear/
+
+I added functionalities to perform operations that would've been too slow to do in MicroPython
+
+I removed some existing functionalities to reduce memory footprint
+
 # Firmware Guide
 
 This guide covers how to install the OpenMV Cam firmware development environment on Windows, Mac, and Linux.

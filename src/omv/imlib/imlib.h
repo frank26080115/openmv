@@ -412,6 +412,7 @@ typedef struct image {
         uint8_t *pixels;
         uint8_t *data;
     };
+    uint32_t timestamp;
 } image_t;
 
 void image_init(image_t *ptr, int w, int h, int bpp, void *data);
@@ -913,16 +914,43 @@ typedef struct statistics {
     int8_t BMean, BMedian, BMode, BSTDev, BMin, BMax, BLQ, BUQ;
 } statistics_t;
 
+#ifndef ASTROPHOTOGEAR
 #define FIND_BLOBS_CORNERS_RESOLUTION 20 // multiple of 4
+#else
+#define FIND_BLOBS_CORNERS_RESOLUTION 12 // multiple of 4
+#endif
 #define FIND_BLOBS_ANGLE_RESOLUTION (360 / FIND_BLOBS_CORNERS_RESOLUTION)
 
 typedef struct find_blobs_list_lnk_data {
     point_t corners[FIND_BLOBS_CORNERS_RESOLUTION];
     rectangle_t rect;
-    uint32_t pixels, perimeter, code, count;
-    float centroid_x, centroid_y, rotation, roundness;
+    uint32_t pixels;
+    #ifndef ASTROPHOTOGEAR
+    uint32_t perimeter;
+    #endif
+    #ifndef ASTROPHOTOGEAR
+    uint32_t code;
+    #endif
+    #ifndef ASTROPHOTOGEAR
+    uint32_t count;
+    #endif
+    float centroid_x, centroid_y;
+
+    //uint16_t area_cnt;
+    uint8_t  maxbrightness;
+    uint32_t brightness;
+    uint16_t saturation_cnt;
+
+    #ifndef ASTROPHOTOGEAR
+    float rotation, roundness;
+    #endif
+    #ifndef ASTROPHOTOGEAR
     uint16_t x_hist_bins_count, y_hist_bins_count, *x_hist_bins, *y_hist_bins;
-    float centroid_x_acc, centroid_y_acc, rotation_acc_x, rotation_acc_y, roundness_acc;
+    #endif
+    float centroid_x_acc, centroid_y_acc;
+    #ifndef ASTROPHOTOGEAR
+    float rotation_acc_x, rotation_acc_y, roundness_acc;
+    #endif
 } find_blobs_list_lnk_data_t;
 
 typedef struct find_lines_list_lnk_data {
@@ -1260,11 +1288,14 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                           list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold, bool robust);
 // Color Tracking
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
-                      list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
+                      list_t *thresholds, bool invert, signed int area_threshold, signed int pixels_threshold, signed int width_threshold, signed int height_threshold,
                       bool merge, int margin,
                       bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
                       bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg,
                       unsigned int x_hist_bins_max, unsigned int y_hist_bins_max);
+
+void imlib_analyze_guidestar(image_t* ptr, find_blobs_list_lnk_data_t* blob, int radius, int* buff, int* pointiness);
+
 // Shape Detection
 size_t trace_line(image_t *ptr, line_t *l, int *theta_buffer, uint32_t *mag_buffer, point_t *point_buffer); // helper/internal
 void merge_alot(list_t *out, int threshold, int theta_threshold); // helper/internal

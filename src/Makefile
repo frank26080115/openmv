@@ -36,7 +36,7 @@ MAKE    = $(Q)make
 CAT     = $(Q)cat
 
 # Targets
-TARGET ?= OPENMV4
+TARGET ?= OPENMV4P
 OPENMV = openmv
 FIRMWARE = firmware
 

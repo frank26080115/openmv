@@ -193,6 +193,12 @@ static mp_obj_t py_winc_connected_sta(mp_obj_t self_in)
     return sta_list;
 }
 
+static mp_obj_t py_winc_closeall(mp_obj_t self_in)
+{
+    winc_socket_closeall();
+    return mp_const_none;
+}
+
 static mp_obj_t py_winc_wait_for_sta(mp_obj_t self_in, mp_obj_t timeout_in)
 {
     uint32_t sta_ip;
@@ -408,6 +414,11 @@ static void py_winc_socket_close(mod_network_socket_obj_t *socket)
     }
 }
 
+static void py_winc_socket_closeall()
+{
+    winc_socket_closeall();
+}
+
 static int py_winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
@@ -579,6 +590,7 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_winc_ifconfig_obj, 1, 2, py_winc_i
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_netinfo_obj,       py_winc_netinfo);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_scan_obj,          py_winc_scan);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_get_rssi_obj,      py_winc_get_rssi);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_closeall_obj,      py_winc_closeall);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_fw_version_obj,    py_winc_fw_version);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_winc_fw_dump_obj,       py_winc_fw_dump);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_winc_fw_update_obj,     py_winc_fw_update);
@@ -594,6 +606,7 @@ static const mp_map_elem_t winc_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_netinfo),       (mp_obj_t)&py_winc_netinfo_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_scan),          (mp_obj_t)&py_winc_scan_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_rssi),          (mp_obj_t)&py_winc_get_rssi_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_closeall),      (mp_obj_t)&py_winc_closeall_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fw_version),    (mp_obj_t)&py_winc_fw_version_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fw_dump),       (mp_obj_t)&py_winc_fw_dump_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fw_update),     (mp_obj_t)&py_winc_fw_update_obj },
@@ -621,6 +634,7 @@ const mod_network_nic_type_t mod_network_nic_type_winc = {
     .gethostbyname = py_winc_gethostbyname,
     .socket     = py_winc_socket_socket,
     .close      = py_winc_socket_close,
+    .closeall   = py_winc_socket_closeall,
     .bind       = py_winc_socket_bind,
     .listen     = py_winc_socket_listen,
     .accept     = py_winc_socket_accept,

@@ -25,27 +25,22 @@ SRCS += $(addprefix common/,    \
    )
 
 SRCS += $(addprefix sensors/,   \
-	ov2640.c                    \
 	ov5640.c                    \
-	ov7690.c                    \
-	ov7725.c                    \
-	ov9650.c                    \
-	mt9v034.c                   \
-	lepton.c                    \
-	hm01b0.c                    \
    )
 
 SRCS += $(addprefix modules/,   \
 	py_clock.c                  \
-	py_gif.c                    \
 	py_helper.c                 \
 	py_image.c                  \
 	py_imageio.c                \
-	py_mjpeg.c                  \
 	py_omv.c                    \
 	py_sensor.c                 \
-	py_tf.c                     \
-	py_fir.c                    \
+   )
+
+SRCS += $(addprefix modules/,   \
+	py_guidestar.c              \
+	py_guidepulser.c            \
+	py_mathhelper.c             \
    )
 
 SRCS += $(addprefix imlib/,     \
@@ -67,7 +62,6 @@ SRCS += $(addprefix imlib/,     \
 	font.c                      \
 	framebuffer.c               \
 	fsort.c                     \
-	gif.c                       \
 	haar.c                      \
 	hog.c                       \
 	hough.c                     \
@@ -81,7 +75,6 @@ SRCS += $(addprefix imlib/,     \
 	line.c                      \
 	lsd.c                       \
 	mathop.c                    \
-	mjpeg.c                     \
 	orb.c                       \
 	phasecorrelation.c          \
 	point.c                     \

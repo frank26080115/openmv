@@ -128,6 +128,7 @@ int winc_flash_verify(const char *path);
 int winc_gethostbyname(const char *name, uint8_t *out_ip);
 int winc_socket_socket(uint8_t type);
 void winc_socket_close(int fd);
+void winc_socket_closeall();
 int winc_socket_bind(int fd, sockaddr *addr);
 int winc_socket_listen(int fd, uint32_t backlog);
 int winc_socket_accept(int fd, sockaddr *addr, int *fd_out, uint32_t timeout);

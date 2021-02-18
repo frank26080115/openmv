@@ -35,6 +35,7 @@ static int cumulative_moving_average(int avg, int x, int n)
     return (x + (n * avg)) / (n + 1);
 }
 
+#ifndef ASTROPHOTOGEAR
 static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_t **new_hist, uint16_t *new_size)
 {
     int start = -1;
@@ -66,7 +67,9 @@ static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_
         }
     }
 }
+#endif
 
+#ifndef ASTROPHOTOGEAR
 static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, uint16_t *b_dst_hist_len,
                        int b_src_start, int b_src_end, uint16_t **b_src_hist, uint16_t *b_src_hist_len,
                        unsigned int max_size)
@@ -108,7 +111,9 @@ static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, ui
     *b_src_hist_len = 0;
     (*b_src_hist) = NULL;
 }
+#endif
 
+#ifndef ASTROPHOTOGEAR
 static float calc_roundness(float blob_a, float blob_b, float blob_c)
 {
     float roundness_div = fast_sqrtf((blob_b * blob_b) + ((blob_a - blob_c) * (blob_a - blob_c)));
@@ -128,9 +133,10 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c)
 
     return IM_DIV(roundness_min, roundness_max);
 }
+#endif
 
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
-                      list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
+                      list_t *thresholds, bool invert, signed int area_threshold, signed int pixels_threshold, signed int width_threshold, signed int height_threshold,
                       bool merge, int margin,
                       bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
                       bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg,
@@ -141,7 +147,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
     bmp.w = ptr->w;
     bmp.h = ptr->h;
     bmp.bpp = IMAGE_BPP_BINARY;
-    bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
+    bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_PREFER_SIZE);
 
     uint16_t *x_hist_bins = NULL;
     if (x_hist_bins_max) x_hist_bins = fb_alloc(ptr->w * sizeof(uint16_t), FB_ALLOC_NO_HINT);
@@ -155,7 +161,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
     list_init(out, sizeof(find_blobs_list_lnk_data_t));
 
+    #ifndef ASTROPHOTOGEAR
     size_t code = 0;
+    #endif
+
     for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
         color_thresholds_list_lnk_data_t lnk_data;
         iterator_get(thresholds, it, &lnk_data);
@@ -347,12 +356,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             }
 
                             rectangle_t rect;
+                            uint32_t rect_area;
                             rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
                             rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
                             rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
                             rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+                            rect_area = rect.w * rect.h;
 
-                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
+                            if (((area_threshold >= 0 && rect_area >= area_threshold) || (area_threshold < 0 && rect_area <= -area_threshold)) && ((pixels_threshold >= 0 && blob_pixels >= pixels_threshold) || (pixels_threshold < 0 && blob_pixels <= -pixels_threshold)) && ((width_threshold >= 0 && rect.w >= width_threshold) || (width_threshold < 0 && rect.w <= -width_threshold)) && ((height_threshold >= 0 && rect.h >= height_threshold) || (height_threshold < 0 && rect.h <= -height_threshold))) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
@@ -370,34 +381,47 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
+                                #ifndef ASTROPHOTOGEAR
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+                                #endif
 
                                 find_blobs_list_lnk_data_t lnk_blob;
                                 memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
                                 memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.perimeter = blob_perimeter;
+                                #endif
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.code = 1 << code;
+                                #endif
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.count = 1;
+                                #endif
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                #endif
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+                                #endif
 
+                                #ifndef ASTROPHOTOGEAR
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
                                 }
@@ -405,6 +429,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (y_hist_bins) {
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
+                                #endif
 
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
@@ -419,8 +444,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (add_to_list) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
+                                    #ifndef ASTROPHOTOGEAR
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
                                     if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                    #endif
                                 }
                             }
 
@@ -617,12 +644,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             }
 
                             rectangle_t rect;
+                            uint32_t rect_area;
                             rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
                             rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
                             rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
                             rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+                            rect_area = rect.w * rect.h;
 
-                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
+                            if (((area_threshold >= 0 && rect_area >= area_threshold) || (area_threshold < 0 && rect_area <= -area_threshold)) && ((pixels_threshold >= 0 && blob_pixels >= pixels_threshold) || (pixels_threshold < 0 && blob_pixels <= -pixels_threshold)) && ((width_threshold >= 0 && rect.w >= width_threshold) || (width_threshold < 0 && rect.w <= -width_threshold)) && ((height_threshold >= 0 && rect.h >= height_threshold) || (height_threshold < 0 && rect.h <= -height_threshold))) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
@@ -638,36 +667,123 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // blob_cy = sigma(y)
                                 // blob_pixels = sigma()
 
-                                float b_mx = blob_cx / ((float) blob_pixels);
-                                float b_my = blob_cy / ((float) blob_pixels);
+                                //float b_mx = blob_cx / ((float) blob_pixels);
+                                //float b_my = blob_cy / ((float) blob_pixels);
+                                #ifndef ASTROPHOTOGEAR
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+                                #endif
+
+                                // find better centoid based on brightness
+                                uint16_t* row_sums = xalloc0(rect.w * sizeof(uint16_t));
+                                uint16_t* col_sums = xalloc0(rect.h * sizeof(uint16_t));
+                                uint8_t saturation_cnt = 0;
+                                uint8_t brightest = 0;
+                                uint32_t britesum = 0;
+                                for (int j = 0, jj = rect.y; j < rect.h; j++, jj++)
+                                {
+                                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, jj);
+                                    for (int i = 0, ii = rect.x; i < rect.w; i++, ii++)
+                                    {
+                                        uint8_t pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, ii);
+                                        if (COLOR_THRESHOLD_GRAYSCALE(pixval, &lnk_data, invert)) {
+                                            britesum += pixval;
+                                            col_sums[j] += pixval;
+                                            row_sums[i] += pixval;
+                                        }
+                                        if (pixval > brightest) {
+                                            brightest = pixval;
+                                        }
+                                        if (pixval >= 254) {
+                                            saturation_cnt += 1;
+                                        }
+                                    }
+                                }
+
+                                float b_mx;
+                                float b_my;
+                                uint16_t sumd;
+                                uint32_t buc_sum;
+
+                                buc_sum = 0;
+                                sumd = 0;
+                                for (int i = 0, ii = rect.x; i < rect.w; i++, ii++)
+                                {
+                                    uint16_t buc = row_sums[i];
+                                    buc_sum += ii * buc;
+                                    sumd  += buc;
+                                }
+                                if (sumd > 0)
+                                {
+                                    b_mx = buc_sum;
+                                    b_mx /= sumd;
+                                }
+                                else
+                                {
+                                    b_mx = blob_cx / ((float) blob_pixels);
+                                }
+
+                                buc_sum = 0;
+                                sumd = 0;
+                                for (int j = 0, jj = rect.y; j < rect.h; j++, jj++)
+                                {
+                                    uint16_t buc = col_sums[j];
+                                    buc_sum += jj * buc;
+                                    sumd  += buc;
+                                }
+                                if (sumd > 0)
+                                {
+                                    b_my = buc_sum;
+                                    b_my /= sumd;
+                                }
+                                else
+                                {
+                                    b_my = blob_cy / ((float) blob_pixels);
+                                }
+                                xfree(row_sums);
+                                xfree(col_sums);
 
                                 find_blobs_list_lnk_data_t lnk_blob;
                                 memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
                                 memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.perimeter = blob_perimeter;
+                                #endif
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.code = 1 << code;
+                                #endif
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.count = 1;
+                                #endif
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
+
+                                lnk_blob.maxbrightness  = brightest;
+                                lnk_blob.brightness     = britesum;
+                                lnk_blob.saturation_cnt = saturation_cnt;
+
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                #endif
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+                                #endif
 
+                                #ifndef ASTROPHOTOGEAR
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
                                 }
@@ -675,6 +791,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (y_hist_bins) {
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
+                                #endif
 
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
@@ -689,8 +806,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (add_to_list) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
+                                    #ifndef ASTROPHOTOGEAR
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
                                     if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                    #endif
                                 }
                             }
 
@@ -887,12 +1006,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             }
 
                             rectangle_t rect;
+                            uint32_t rect_area;
                             rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
                             rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
                             rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
                             rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+                            rect_area = rect.w * rect.h;
 
-                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
+                            if (((area_threshold >= 0 && rect_area >= area_threshold) || (area_threshold < 0 && rect_area <= -area_threshold)) && ((pixels_threshold >= 0 && blob_pixels >= pixels_threshold) || (pixels_threshold < 0 && blob_pixels <= -pixels_threshold)) && ((width_threshold >= 0 && rect.w >= width_threshold) || (width_threshold < 0 && rect.w <= -width_threshold)) && ((height_threshold >= 0 && rect.h >= height_threshold) || (height_threshold < 0 && rect.h <= -height_threshold))) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
@@ -910,34 +1031,47 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
+                                #ifndef ASTROPHOTOGEAR
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+                                #endif
 
                                 find_blobs_list_lnk_data_t lnk_blob;
                                 memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
                                 memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.perimeter = blob_perimeter;
+                                #endif
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.code = 1 << code;
+                                #endif
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.count = 1;
+                                #endif
                                 lnk_blob.centroid_x = b_mx;
                                 lnk_blob.centroid_y = b_my;
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
                                 lnk_blob.x_hist_bins = NULL;
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
+                                #endif
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
                                 lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                #ifndef ASTROPHOTOGEAR
                                 lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
                                 lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+                                #endif
 
+                                #ifndef ASTROPHOTOGEAR
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
                                 }
@@ -945,6 +1079,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (y_hist_bins) {
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
+                                #endif
 
                                 bool add_to_list = threshold_cb_arg == NULL;
                                 if (!add_to_list) {
@@ -959,8 +1094,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 if (add_to_list) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
+                                    #ifndef ASTROPHOTOGEAR
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
                                     if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                    #endif
                                 }
                             }
 
@@ -976,7 +1113,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
             }
         }
 
+        #ifndef ASTROPHOTOGEAR
         code += 1;
+        #endif
     }
 
     lifo_free(&lifo);
@@ -1008,12 +1147,34 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                     if (rectangle_overlap(&(lnk_blob.rect), &temp)
                     && ((merge_cb_arg == NULL) || merge_cb(merge_cb_arg, &lnk_blob, &tmp_blob))) {
                         // Have to merge these first before merging rects.
-                        if (x_hist_bins_max) merge_bins(lnk_blob.rect.x, lnk_blob.rect.x + lnk_blob.rect.w - 1, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count,
-                                                        tmp_blob.rect.x, tmp_blob.rect.x + tmp_blob.rect.w - 1, &tmp_blob.x_hist_bins, &tmp_blob.x_hist_bins_count,
+                        #ifndef ASTROPHOTOGEAR
+                        if (x_hist_bins_max) merge_bins(lnk_blob.rect.x, lnk_blob.rect.x + lnk_blob.rect.w - 1,
+                                                        #ifndef ASTROPHOTOGEAR
+                                                        &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count,
+                                                        #else
+                                                        NULL, NULL,
+                                                        #endif
+                                                        tmp_blob.rect.x, tmp_blob.rect.x + tmp_blob.rect.w - 1,
+                                                        #ifndef ASTROPHOTOGEAR
+                                                        &tmp_blob.x_hist_bins, &tmp_blob.x_hist_bins_count,
+                                                        #else
+                                                        NULL, NULL,
+                                                        #endif
                                                         x_hist_bins_max);
-                        if (y_hist_bins_max) merge_bins(lnk_blob.rect.y, lnk_blob.rect.y + lnk_blob.rect.h - 1, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count,
-                                                        tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1, &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
+                        if (y_hist_bins_max) merge_bins(lnk_blob.rect.y, lnk_blob.rect.y + lnk_blob.rect.h - 1,
+                                                        #ifndef ASTROPHOTOGEAR
+                                                        &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count,
+                                                        #else
+                                                        NULL, NULL,
+                                                        #endif
+                                                        tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1,
+                                                        #ifndef ASTROPHOTOGEAR
+                                                        &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
+                                                        #else
+                                                        NULL, NULL,
+                                                        #endif
                                                         y_hist_bins_max);
+                        #endif
                         // Merge corners...
                         for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
                             float z_dst = (lnk_blob.corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
@@ -1029,21 +1190,31 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
                         // Merge counters...
                         lnk_blob.pixels += tmp_blob.pixels; // won't overflow
+                        #ifndef ASTROPHOTOGEAR
                         lnk_blob.perimeter += tmp_blob.perimeter; // won't overflow
+                        #endif
+                        #ifndef ASTROPHOTOGEAR
                         lnk_blob.code |= tmp_blob.code; // won't overflow
+                        #endif
+                        #ifndef ASTROPHOTOGEAR
                         lnk_blob.count += tmp_blob.count; // won't overflow
+                        #endif
                         // Merge accumulators...
                         lnk_blob.centroid_x_acc += tmp_blob.centroid_x_acc;
                         lnk_blob.centroid_y_acc += tmp_blob.centroid_y_acc;
+                        #ifndef ASTROPHOTOGEAR
                         lnk_blob.rotation_acc_x += tmp_blob.rotation_acc_x;
                         lnk_blob.rotation_acc_y += tmp_blob.rotation_acc_y;
                         lnk_blob.roundness_acc += tmp_blob.roundness_acc;
+                        #endif
                         // Compute current values...
                         lnk_blob.centroid_x = lnk_blob.centroid_x_acc / lnk_blob.pixels;
                         lnk_blob.centroid_y = lnk_blob.centroid_y_acc / lnk_blob.pixels;
+                        #ifndef ASTROPHOTOGEAR
                         lnk_blob.rotation = fast_atan2f(lnk_blob.rotation_acc_y / lnk_blob.pixels,
                                                         lnk_blob.rotation_acc_x / lnk_blob.pixels);
                         lnk_blob.roundness = lnk_blob.roundness_acc / lnk_blob.pixels;
+                        #endif
                         merge_occured = true;
                     } else {
                         list_push_back(out, &tmp_blob);
@@ -1060,6 +1231,97 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
             }
         }
     }
+}
+
+void imlib_analyze_guidestar(image_t* ptr, find_blobs_list_lnk_data_t* blob, int radius, int* buff, int* pointiness)
+{
+    int cxi = (int)fast_roundf(blob->centroid_x);
+    int cyi = (int)fast_roundf(blob->centroid_y);
+    int xlim = ptr->w;
+    int ylim = ptr->h;
+    uint8_t *row_ptr;
+    uint8_t pixval;
+    row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, cyi);
+    pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi);
+    buff[0] = pixval;
+    for (int i = 1; i < radius; i++)
+    {
+        uint8_t cnt = 0;
+        row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, cyi);
+        if (cxi - i >= 0) {
+            pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi - i);
+            buff[i] += pixval;
+            cnt += 1;
+        }
+        if (cxi + i < xlim) {
+            pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi + i);
+            buff[i] += pixval;
+            cnt += 1;
+        }
+        if (cyi + i < ylim) {
+            row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, cyi + i);
+            pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi);
+            buff[i] += pixval;
+            cnt += 1;
+            //if (cxi - i >= 0) {
+            //    pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi - i);
+            //    buff[i] += pixval;
+            //    cnt += 1;
+            //}
+            //if (cxi + i < xlim) {
+            //    pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi + i);
+            //    buff[i] += pixval;
+            //    cnt += 1;
+            //}
+        }
+        if (cyi - i >= 0) {
+            row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, cyi - i);
+            pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi);
+            buff[i] += pixval;
+            cnt += 1;
+            //if (cxi - i >= 0) {
+            //    pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi - i);
+            //    buff[i] += pixval;
+            //    cnt += 1;
+            //}
+            //if (cxi + i < xlim) {
+            //    pixval = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, cxi + i);
+            //    buff[i] += pixval;
+            //    cnt += 1;
+            //}
+        }
+        buff[i] += cnt / 2;
+        buff[i] /= cnt;
+    }
+
+    int max_brite = (int)buff[0];
+    float _pointiness = 0;
+    int rsum = 0;
+    for (int i = 0, j = radius, px = -1; i < radius; i++)
+    {
+        int x = (int)buff[i];
+        if (i != 0 && j > 0)
+        {
+            int dx = px - x;
+            if (dx < 0 || (dx <= 0 && px >= 254)) {
+                dx -= 2;
+            }
+            dx *= j;
+            rsum += j;
+            if (dx < 0) {
+                dx *= 2;
+            }
+            _pointiness += dx;
+            j -= 1;
+        }
+        px = x;
+    }
+    _pointiness *= 100;
+    //_pointiness += max_brite / 2;
+    _pointiness /= max_brite;
+    //_pointiness += rsum / 2;
+    _pointiness /= rsum;
+    *pointiness = fast_roundf(_pointiness);
 }
 
 void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,

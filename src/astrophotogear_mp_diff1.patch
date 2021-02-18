@@ -1,0 +1,61 @@
+diff --git a/extmod/ulab b/extmod/ulab
+index be9033384..a223de9c7 160000
+--- a/extmod/ulab
++++ b/extmod/ulab
+@@ -1 +1 @@
+-Subproject commit be9033384eb86a172ef35f6c7b562bc86f194d7d
++Subproject commit a223de9c73b1ad175ce61230c0ea89b7c173b88d
+diff --git a/lib/berkeley-db-1.xx b/lib/berkeley-db-1.xx
+--- a/lib/berkeley-db-1.xx
++++ b/lib/berkeley-db-1.xx
+@@ -1 +1 @@
+-Subproject commit 35aaec4418ad78628a3b935885dd189d41ce779b
++Subproject commit 35aaec4418ad78628a3b935885dd189d41ce779b-dirty
+diff --git a/ports/stm32/modnetwork.h b/ports/stm32/modnetwork.h
+index 6eb370459..1dfba5f98 100644
+--- a/ports/stm32/modnetwork.h
++++ b/ports/stm32/modnetwork.h
+@@ -62,6 +62,7 @@ typedef struct _mod_network_nic_type_t {
+     // API for socket operations; return -1 on error
+     int (*socket)(struct _mod_network_socket_obj_t *socket, int *_errno);
+     void (*close)(struct _mod_network_socket_obj_t *socket);
++    void (*closeall)();
+     int (*bind)(struct _mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno);
+     int (*listen)(struct _mod_network_socket_obj_t *socket, mp_int_t backlog, int *_errno);
+     int (*accept)(struct _mod_network_socket_obj_t *socket, struct _mod_network_socket_obj_t *socket2, byte *ip, mp_uint_t *port, int *_errno);
+diff --git a/ports/stm32/mpconfigport.h b/ports/stm32/mpconfigport.h
+index c05afe0ce..46b1f4f32 100644
+--- a/ports/stm32/mpconfigport.h
++++ b/ports/stm32/mpconfigport.h
+@@ -266,6 +266,8 @@ extern const struct _mp_obj_module_t cpufreq_module;
+ extern const struct _mp_obj_module_t tf_module;
+ extern const struct _mp_obj_module_t tv_module;
+ extern const struct _mp_obj_module_t nn_st_module;
++extern const struct _mp_obj_module_t guidepulser_module;
++extern const struct _mp_obj_module_t guidestar_module;
+ #if MICROPY_PY_ULAB
+ extern const struct _mp_obj_module_t ulab_user_cmodule;
+ #endif
+@@ -355,12 +357,9 @@ extern const struct _mp_obj_module_t micro_speech_module;
+     SENSOR_BUILTIN_MODULE \
+     { MP_OBJ_NEW_QSTR(MP_QSTR_image),   (mp_obj_t)&image_module }, \
+     { MP_OBJ_NEW_QSTR(MP_QSTR_lcd),     (mp_obj_t)&lcd_module }, \
+-    { MP_OBJ_NEW_QSTR(MP_QSTR_fir),     (mp_obj_t)&fir_module }, \
+-    { MP_OBJ_NEW_QSTR(MP_QSTR_gif),     (mp_obj_t)&gif_module }, \
+-    { MP_OBJ_NEW_QSTR(MP_QSTR_mjpeg),   (mp_obj_t)&mjpeg_module }, \
+     { MP_OBJ_NEW_QSTR(MP_QSTR_cpufreq), (mp_obj_t)&cpufreq_module }, \
+-    { MP_OBJ_NEW_QSTR(MP_QSTR_tf),      (mp_obj_t)&tf_module }, \
+-    { MP_OBJ_NEW_QSTR(MP_QSTR_tv),      (mp_obj_t)&tv_module }, \
++    { MP_OBJ_NEW_QSTR(MP_QSTR_guidepulser), (mp_obj_t)&guidepulser_module }, \
++    { MP_OBJ_NEW_QSTR(MP_QSTR_guidestar), (mp_obj_t)&guidestar_module }, \
+     CUBEAI_BUILTIN_MODULE \
+     ULAB_BUILTIN_MODULE \
+     IMU_BUILTIN_MODULE \
+@@ -368,7 +367,6 @@ extern const struct _mp_obj_module_t micro_speech_module;
+     NETWORK_BUILTIN_MODULE \
+     AUDIO_BUILTIN_MODULE \
+     MICRO_SPEECH_BUILTIN_MODULE \
+-    { MP_ROM_QSTR(MP_QSTR__onewire), MP_ROM_PTR(&mp_module_onewire) }, \
+ 
+ // extra constants
+ #define MICROPY_PORT_CONSTANTS \
